@@ -504,6 +504,20 @@ html, body {
   line-height: 1.3;
   min-height: 72px;
   display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+}
+.camp-card-icon {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+}
+.camp-card-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
   flex-direction: column;
   gap: 2px;
 }
@@ -906,6 +920,26 @@ html, body {
   font-size: 0.65rem;
   line-height: 1.25;
   min-height: 52px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 7px;
+}
+.art-btn-icon {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+}
+.art-btn-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.art-btn-body span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.62rem;
+  line-height: 1.25;
 }
 
 .art-btn strong {
@@ -1539,13 +1573,31 @@ kbd {
 }
 
 /* Character status panel — top left */
+/* Status panel: full Vietnamese labels (wider) */
+#status-panel .st-label {
+  min-width: 7.5em;
+  white-space: normal;
+  line-height: 1.15;
+  font-size: 0.68rem;
+}
+#ability-panel .ab-stat-full {
+  display: block;
+  font-size: 0.65rem;
+  line-height: 1.25;
+  margin: 1px 0;
+}
+#ability-panel .ab-stat-full b {
+  font-weight: 600;
+  color: var(--text);
+}
+
 #status-panel {
   position: absolute;
   top: 12px;
   left: 12px;
   z-index: 5;
-  min-width: 168px;
-  max-width: min(220px, 28vw);
+  min-width: 200px;
+  max-width: min(280px, 34vw);
   padding: 10px 12px 12px;
   background: linear-gradient(165deg, rgba(22, 16, 28, 0.92), rgba(12, 8, 16, 0.88));
   border: 1px solid #3a2f4a;
@@ -2052,6 +2104,8 @@ kbd {
   backdrop-filter: blur(3px);
 }
 
+
+
 .overlay-panel {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -2169,24 +2223,30 @@ kbd {
   line-height: 1.3;
 }
 
+/* Sách Bậc Thầy — vừa 1 màn, không scroll */
 .ability-panel {
-  max-width: min(1100px, 96vw);
-  width: min(1100px, 96vw);
-  max-height: min(92vh, 720px);
+  max-width: min(1180px, 96vw);
+  width: min(1180px, 96vw);
+  max-height: min(94vh, 860px);
+  height: auto;
   display: flex;
   flex-direction: column;
-  padding: 1.25rem 1.25rem 1rem;
+  padding: 0.75rem 1rem 0.65rem;
+  border-radius: 14px;
+  box-sizing: border-box;
 }
 
 .ability-panel h2 {
   color: #8ab4ff;
-  margin-bottom: 0.25rem;
-  font-size: 1.35rem;
+  margin-bottom: 0.1rem;
+  font-size: 1.2rem;
+  flex: 0 0 auto;
 }
 
 .ability-panel > p {
-  margin-bottom: 0.75rem;
-  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.78rem;
+  flex: 0 0 auto;
 }
 
 .ability-panel .upgrade-grid {
@@ -2196,44 +2256,50 @@ kbd {
   padding-right: 0;
 }
 
-/* Starter tome: full grid, one screen — grouped PHY / MAG / ELE / BARD */
+/* Full catalog: MỌI ability trong 1 màn — không scroll */
 .ability-panel .upgrade-grid.ability-full-list {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 6px;
-  overflow: auto;
+  /* ~7 cột × vài hàng cho ~27 ability + 4 tiêu đề nhóm */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  overflow: hidden; /* không scroll */
   max-height: none;
-  height: min(62vh, 520px);
+  height: auto;
+  flex: 0 1 auto;
   align-content: start;
+  padding-bottom: 2px;
 }
 
 .ability-panel .upgrade-grid.ability-full-list .upgrade-btn {
-  margin: 0;
-  width: 100%;
-  min-height: 88px;
-  padding: 0.35rem 0.3rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  border-radius: 8px;
-  gap: 2px;
+  margin: 0 !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 0.28rem 0.2rem 0.3rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  border-radius: 7px;
+  gap: 1px !important;
   position: relative;
 }
 
 .ab-section-head {
   grid-column: 1 / -1;
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 6px 4px 2px;
-  margin-top: 2px;
-  border-bottom: 1px solid rgba(58, 47, 74, 0.7);
+  padding: 3px 2px 1px;
+  margin-top: 0;
+  border-bottom: 1px solid rgba(58, 47, 74, 0.65);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  background: transparent;
+  position: static;
 }
 
 .ab-section-head em {
@@ -2282,9 +2348,14 @@ kbd {
 }
 
 .ability-panel .upgrade-grid.ability-full-list .upgrade-btn strong {
-  font-size: 0.68rem;
-  line-height: 1.15;
+  font-size: 0.62rem;
+  line-height: 1.1;
   margin-bottom: 0;
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ability-icon {
@@ -2299,13 +2370,10 @@ kbd {
 }
 
 .ability-panel .upgrade-grid.ability-full-list .ability-icon {
-  width: 36px !important;
-  height: 36px !important;
-  margin-bottom: 2px;
-}
-
-.upgrade-btn:not(.ability-full-list *) {
-  /* scroll/3-pick layout keeps larger icons via JS size */
+  width: 28px !important;
+  height: 28px !important;
+  margin: 0 auto 1px !important;
+  flex: 0 0 auto !important;
 }
 
 .ab-card-head .ability-icon {
@@ -2319,22 +2387,62 @@ kbd {
   align-items: center;
 }
 
-.ability-panel .upgrade-grid.ability-full-list .upgrade-btn > span:not(.ab-pick-stats) {
-  display: none; /* hide long desc on full grid */
+/* Full grid: chỉ icon + tên — chỉ số xem tooltip (hover) để vừa 1 màn */
+.ability-panel .upgrade-grid.ability-full-list .upgrade-btn > span:not(.ab-dmg-badge) {
+  display: none !important;
 }
 
-.ability-panel .upgrade-grid.ability-full-list .ab-pick-stats {
-  margin-top: 0.15rem;
-  font-size: 0.58rem;
-  line-height: 1.25;
-  color: #8a9ab0;
+.ability-panel .upgrade-grid.ability-full-list .ab-dmg-badge {
+  font-size: 0.45rem;
+  top: 2px;
+  right: 2px;
+  max-width: 42%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 2px;
 }
 
-@media (max-width: 900px) {
+/* Panel full-list: rộng vừa, không tràn viewport */
+.ability-panel.ability-panel-fullscreen {
+  width: min(1180px, 96vw);
+  max-width: min(1180px, 96vw);
+  max-height: min(94vh, 860px);
+  height: auto;
+  border-radius: 14px;
+}
+
+/* 3-pick / nâng cấp: panel nhỏ hơn */
+.ability-panel:not(.ability-panel-fullscreen) {
+  width: min(720px, 94vw);
+  max-width: min(720px, 94vw);
+  height: auto;
+  max-height: min(90vh, 640px);
+  border-radius: 14px;
+}
+
+@media (max-width: 1100px) {
+  .ability-panel .upgrade-grid.ability-full-list {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .ability-panel .upgrade-grid.ability-full-list {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .ability-panel .upgrade-grid.ability-full-list .ability-icon {
+    width: 24px !important;
+    height: 24px !important;
+  }
+  .ability-panel .upgrade-grid.ability-full-list .upgrade-btn strong {
+    font-size: 0.55rem;
+  }
+}
+
+@media (max-width: 560px) {
   .ability-panel .upgrade-grid.ability-full-list {
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    grid-template-rows: repeat(7, minmax(0, 1fr));
-    height: min(62vh, 480px);
   }
 }
 
@@ -2442,9 +2550,16 @@ kbd {
   color: var(--muted);
 }
 .run-hero-chip .rh-type {
-  font-size: 0.52rem;
+  font-size: 0.5rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  max-width: 54px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.run-hero-chip {
+  width: 64px;
 }
 .run-hero-chip:hover {
   border-color: rgba(212, 168, 75, 0.55);

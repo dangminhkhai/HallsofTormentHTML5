@@ -50,9 +50,9 @@
   const ITEM_SLOT_LIMITS = DATA.ITEM_SLOT_LIMITS || { helmet: 1, amulet: 1, ring: 2, chest: 1, boots: 1, gloves: 1 };
   const ITEM_SLOT_LABELS = DATA.ITEM_SLOT_LABELS || {};
   const ITEM_RARITY = DATA.ITEM_RARITY || {
-    common: { id: "common", label: "Common", mul: 1, color: "#a0a8b0" },
-    uncommon: { id: "uncommon", label: "Uncommon", mul: 1.35, color: "#50c070" },
-    rare: { id: "rare", label: "Rare", mul: 1.7, color: "#c080e0" },
+    common: { id: "common", label: "Thường", mul: 1, color: "#a0a8b0" },
+    uncommon: { id: "uncommon", label: "Hiếm vừa", mul: 1.35, color: "#50c070" },
+    rare: { id: "rare", label: "Cực hiếm", mul: 1.7, color: "#c080e0" },
   };
   const POTIONS = DATA.POTIONS || {};
   const POTION_ORDER = DATA.POTION_ORDER || Object.keys(POTIONS);
@@ -720,10 +720,12 @@
   function diffLabel() {
     if (playMode === "torment") {
       const n = (activeArtifacts && activeArtifacts.length) || 0;
-      return n ? `Torment Lv ${tormentLevel || 1} · A${n}` : `Torment Lv ${tormentLevel || 1}`;
+      return n
+        ? `Khổ hình cấp ${tormentLevel || 1} · ${n} tạo tác`
+        : `Khổ hình cấp ${tormentLevel || 1}`;
     }
-    if (agonyEnabled) return `Agony ${agonyRank}`;
-    return "Hall · Normal";
+    if (agonyEnabled) return `Khổ hình (Agony) ${agonyRank}`;
+    return "Sảnh · Thường";
   }
 
   function isHardModeRun() {
@@ -872,7 +874,7 @@
         if (stacks > 1) {
           floatingTexts.push({
             x: e.x, y: e.y - e.r - 18,
-            text: `CRIT×${stacks}`, life: 0.5, maxLife: 0.5, color: "#ffd070", vy: -45,
+            text: `CHÍ MẠNG×${stacks}`, life: 0.5, maxLife: 0.5, color: "#ffd070", vy: -45,
           });
         }
         if (player.weaponHealOnHit && player.hp < player.maxHp) {
@@ -1421,7 +1423,7 @@
       floatingTexts.push({
         x: e.x + rand(-4, 4),
         y: e.y - e.r - 12,
-        text: "CRIT",
+        text: "CHÍ MẠNG",
         life: 0.45,
         maxLife: 0.45,
         color: "#ffd070",
@@ -2226,7 +2228,7 @@
     if (meta.ownedMarks[id]) return false;
     const cost = m.cost || 600;
     if ((meta.gold || 0) < cost) {
-      toast("Không đủ Gold", "bad");
+      toast("Không đủ Vàng", "bad");
       return false;
     }
     meta.gold -= cost;
@@ -2252,7 +2254,7 @@
     if (typeof updateHeroStatPanel === "function") updateHeroStatPanel();
     updateStartButton();
     sfx("ui");
-    toast(was ? `Unequip ${MARKS[id].name}` : `Equip ${MARKS[id].name}`, "mark");
+    toast(was ? `Tháo ${MARKS[id].name}` : `Đeo ${MARKS[id].name}`, "mark");
     return true;
   }
 
@@ -2274,7 +2276,7 @@
     return (r && r.mul) || 1;
   }
   function rarityMeta(rarity) {
-    return ITEM_RARITY[rarity] || ITEM_RARITY.common || { label: "Common", color: "#a0a8b0", mul: 1 };
+    return ITEM_RARITY[rarity] || ITEM_RARITY.common || { label: "Thường", color: "#a0a8b0", mul: 1 };
   }
 
   /** Item description for UI including Uncommon/Rare separate effects */
@@ -2400,7 +2402,7 @@
     if (rank >= (b.maxRank || 5)) return false;
     const cost = blessingNextCost(id);
     if ((meta.gold || 0) < cost) {
-      toast("Không đủ Gold", "bad");
+      toast("Không đủ Vàng", "bad");
       return false;
     }
     meta.gold -= cost;
@@ -2408,7 +2410,7 @@
     saveMeta();
     rebuildCampUI();
     updateMetaBar();
-    toast(`${b.name} · rank ${rank + 1}`, "good");
+    toast(`${b.name} · cấp ${rank + 1}`, "good");
     return true;
   }
 
@@ -2429,7 +2431,7 @@
     saveMeta();
     rebuildCampUI();
     updateMetaBar();
-    if (back > 0) toast(`Refund +${back}G`, "good");
+    if (back > 0) toast(`Hoàn +${back} Vàng`, "good");
     return back;
   }
 
@@ -2441,7 +2443,7 @@
     if (rank >= (s.maxRank || 5)) return false;
     const cost = (s.costs && s.costs[rank]) || 5 * (rank + 1);
     if ((meta.shards || 0) < cost) {
-      toast("Không đủ Shards", "bad");
+      toast("Không đủ Mảnh", "bad");
       return false;
     }
     meta.shards -= cost;
@@ -2449,7 +2451,7 @@
     saveMeta();
     rebuildCampUI();
     updateMetaBar();
-    toast(`${s.name} · rank ${rank + 1}`, "good");
+    toast(`${s.name} · cấp ${rank + 1}`, "good");
     return true;
   }
 
@@ -2472,7 +2474,7 @@
         if (di >= 0) meta.loadout.splice(di, 1);
       }
       if (meta.loadout.length >= MAX_LOADOUT) {
-        toast("Loadout đầy (7)", "warn");
+        toast("Trang bị khởi đầu đầy (7 món)", "warn");
         return;
       }
       meta.loadout.push(id); // loadout always Common base
@@ -2494,7 +2496,7 @@
   function updateLoadoutLabel() {
     const elL = document.getElementById("pick-loadout-label");
     const n = (meta.loadout || []).length;
-    if (elL) elL.textContent = `Loadout: ${n}/${MAX_LOADOUT} (wiki slots)`;
+    if (elL) elL.textContent = `Trang bị khởi đầu: ${n}/${MAX_LOADOUT}`;
     const cnt = document.getElementById("loadout-count");
     if (cnt) cnt.textContent = `${n} / ${MAX_LOADOUT}`;
     if (typeof updateHeroStatPanel === "function") updateHeroStatPanel();
@@ -2636,8 +2638,8 @@
     const can = gold >= cost && levelRerollCount < maxR;
     btn.disabled = !can;
     btn.textContent = levelRerollCount >= maxR
-      ? "Reroll MAX"
-      : `Reroll (${cost}G)`;
+      ? "Gieo lại (tối đa)"
+      : `Gieo lại (${cost} Vàng)`;
   }
 
   function openLevelUp() {
@@ -2666,11 +2668,11 @@
     el.upgradeOptions.innerHTML = "";
     const title = el.levelup && el.levelup.querySelector("h2");
     const sub = document.getElementById("levelup-sub") || (el.levelup && el.levelup.querySelector("p"));
-    if (title) title.textContent = "LEVEL UP!";
+    if (title) title.textContent = "LÊN CẤP!";
     if (sub) {
       sub.innerHTML =
-        `Chọn 1 trong 4 · Trait / Ability UPG · <span style="color:#d4a84b">1 ×2</span>` +
-        ` · Reroll bằng gold run`;
+        `Chọn 1 trong 4 · Thuộc tính / Nâng cấp khả năng · <span style="color:#d4a84b">1 ô ×2</span>` +
+        ` · Gieo lại bằng vàng trong màn`;
     }
 
     options.forEach((u, i) => {
@@ -2680,10 +2682,11 @@
       btn.className = "upgrade-btn pick-with-icon"
         + (doubled ? " doubled" : "")
         + (u.kind === "ability_up" ? " ab-up" : "");
-      const rank = u.kind === "ability_up" ? "" : ` · R${(player.traitRanks[u.id] || 0) + 1}`;
-      const catLabel = u.cat === "ab_trait" ? "ability" : u.cat === "weapon_prof" ? "weapon" : (u.cat || "");
+      const rank = u.kind === "ability_up" ? "" : ` · Cấp ${(player.traitRanks[u.id] || 0) + 1}`;
+      const catMap = { ability: "khả năng", weapon: "vũ khí", base: "cơ bản", ab_trait: "khả năng", weapon_prof: "thành thạo" };
+      const catLabel = u.cat === "ab_trait" ? "khả năng" : u.cat === "weapon_prof" ? "thành thạo" : (catMap[u.cat] || u.cat || "");
       const tag = u.kind === "ability_up"
-        ? `<em class="x2-badge">UPG</em>`
+        ? `<em class="x2-badge">NÂNG CẤP</em>`
         : (catLabel ? `<em class="trait-cat">${catLabel}</em>` : "");
 
       // Icon: ability UPG / ability trait → ability icon; else trait icon
@@ -2767,23 +2770,27 @@
   /** Format ability stats for pick menu / HUD */
   function formatAbilityStatLines(def) {
     const lines = [];
-    if (def.damage != null) lines.push(`DMG ${Math.round(def.damage)}`);
+    if (def.damage != null) lines.push(`Sát thương ${Math.round(def.damage)}`);
     if (def.attackSpeed != null && def.type !== "orbit") {
-      lines.push(`ASP ${def.attackSpeed.toFixed(2)}/s`);
-      lines.push(`CD ${(1 / Math.max(0.15, def.attackSpeed)).toFixed(2)}s`);
+      lines.push(`Tốc độ đánh ${def.attackSpeed.toFixed(2)}/giây`);
+      lines.push(`Hồi chiêu ${(1 / Math.max(0.15, def.attackSpeed)).toFixed(2)} giây`);
     }
     if (def.type === "orbit") {
-      lines.push(`ORBS ${def.count || 1}`);
-      if (def.orbitRadius) lines.push(`RAD ${def.orbitRadius}`);
-      if (def.orbitSpeed) lines.push(`SPIN ${def.orbitSpeed.toFixed(1)}`);
+      lines.push(`Số quả cầu ${def.count || 1}`);
+      if (def.orbitRadius) lines.push(`Bán kính quỹ đạo ${def.orbitRadius}`);
+      if (def.orbitSpeed) lines.push(`Tốc độ quay ${def.orbitSpeed.toFixed(1)}`);
     }
-    if (def.count != null && def.type !== "orbit") lines.push(`×${def.count}`);
-    if (def.pierce != null) lines.push(`PRC ${def.pierce}`);
-    if (def.range != null) lines.push(`RNG ${def.range}`);
-    if (def.aoe != null) lines.push(`AOE ${def.aoe}`);
-    if (def.critChance != null) lines.push(`CRIT ${Math.round(def.critChance * 100)}%`);
-    if (def.critBonus != null) lines.push(`C.DMG +${Math.round(def.critBonus * 100)}%`);
-    if (def.heal != null) lines.push(`HEAL ${def.heal}`);
+    if (def.count != null && def.type !== "orbit") lines.push(`Số lượng ×${def.count}`);
+    if (def.pierce != null) lines.push(`Xuyên ${def.pierce}`);
+    if (def.range != null) lines.push(`Tầm đánh ${def.range}`);
+    if (def.aoe != null) lines.push(`Diện tích ${def.aoe}`);
+    if (def.critChance != null) lines.push(`Tỷ lệ chí mạng ${Math.round(def.critChance * 100)}%`);
+    if (def.critBonus != null) lines.push(`Sát thương chí mạng +${Math.round(def.critBonus * 100)}%`);
+    if (def.heal != null) lines.push(`Hồi máu ${def.heal}`);
+    if (def.element) {
+      const elMap = { fire: "Lửa", lightning: "Sét", ice: "Băng", earth: "Đất", physical: "Vật lý", magic: "Phép thuật" };
+      lines.push(`Nguyên tố: ${elMap[def.element] || def.element}`);
+    }
     return lines;
   }
 
@@ -2797,8 +2804,8 @@
     if (el.abilityPick) {
       const title = el.abilityPick.querySelector("h2");
       const sub = el.abilityPick.querySelector("p");
-      if (title) title.textContent = "ABILITY UPGRADE";
-      if (sub) sub.innerHTML = `Chọn 1 nâng cấp Ability · tối đa ${MAX_ABILITY_UPGRADES}/ability · <span style="color:#8ab4ff">wiki HoT</span>`;
+      if (title) title.textContent = "NÂNG CẤP KHẢ NĂNG";
+      if (sub) sub.innerHTML = `Chọn 1 nâng cấp khả năng · tối đa ${MAX_ABILITY_UPGRADES}/khả năng · chỉ số ghi đầy đủ`;
     }
     for (const opt of shuffle(pool).slice(0, Math.min(3, pool.length))) {
       const def = ABILITIES[opt.abilityId];
@@ -2814,7 +2821,7 @@
       body.className = "pick-body";
       const titleEl = document.createElement("strong");
       titleEl.style.color = def ? def.color : "#d4a84b";
-      titleEl.innerHTML = `${opt.name} <em class="x2-badge">UPG</em>`;
+      titleEl.innerHTML = `${opt.name} <em class="x2-badge">NÂNG CẤP</em>`;
       const descEl = document.createElement("span");
       descEl.textContent = `${def ? def.name + " · " : ""}${opt.desc || ""}`;
       body.appendChild(titleEl);
@@ -2859,15 +2866,17 @@
     const dm = abilityDmgMeta(dtype);
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "upgrade-btn ab-dmg-" + dtype;
+    btn.className = "upgrade-btn ab-dmg-" + dtype + (fullCatalog ? " ab-full-card" : " pick-with-icon");
     btn.dataset.dmg = dtype;
-    const stats = fullCatalog
-      ? formatAbilityStatLines(ab).slice(0, 4).join(" · ")
-      : formatAbilityStatLines(ab).join(" · ");
+    const elemMap = { fire: "Lửa", lightning: "Sét", ice: "Băng", earth: "Đất", physical: "Vật lý", magic: "Phép thuật" };
+    const elem = ab.element || "";
+    const elemVi = elemMap[elem] || elem;
+    // Full grid: gọn hơn để vừa màn hình; 3-pick: đủ dòng
+    const stats = formatAbilityStatLines(ab).join(" · ");
 
     const icon = document.createElement("canvas");
     icon.className = "ability-icon";
-    const iconSize = fullCatalog ? 36 : 52;
+    const iconSize = fullCatalog ? 28 : 52;
     if (typeof window.paintAbilityIcon === "function") {
       window.paintAbilityIcon(icon, ab.id, ab.color, iconSize);
     }
@@ -2876,11 +2885,7 @@
     badge.className = "ab-dmg-badge";
     badge.style.color = dm.color;
     badge.style.borderColor = dm.color;
-    const elem = ab.element || "";
-    const elemShort = (elem === "fire" || elem === "lightning" || elem === "ice" || elem === "earth")
-      ? "·" + elem.slice(0, 3).toUpperCase()
-      : "";
-    badge.textContent = dm.short + elemShort;
+    badge.textContent = dm.label;
 
     const nameEl = document.createElement("strong");
     nameEl.style.color = ab.color;
@@ -2891,14 +2896,19 @@
 
     const statsEl = document.createElement("span");
     statsEl.className = "ab-pick-stats";
-    statsEl.textContent = `${dm.label}${elem && elem !== dtype ? " · " + elem : ""} · ${stats}`;
+    // Full catalog: card chỉ icon+tên (không scroll); chỉ số đầy đủ trong tooltip
+    statsEl.textContent = fullCatalog
+      ? ""
+      : `${dm.label}${elemVi && elemVi !== dm.label ? " · " + elemVi : ""} · ${stats}`;
 
     btn.appendChild(badge);
     btn.appendChild(icon);
     btn.appendChild(nameEl);
-    btn.appendChild(descEl);
-    btn.appendChild(statsEl);
-    btn.title = `${ab.name} [${dm.label}${elem ? " · " + elem : ""}]\n${ab.desc || ""}\n${formatAbilityStatLines(ab).join(" · ")}`;
+    if (!fullCatalog) {
+      btn.appendChild(descEl);
+      btn.appendChild(statsEl);
+    }
+    btn.title = `${ab.name}\n${dm.label}${elemVi ? " · " + elemVi : ""}\n${ab.desc || ""}\n${formatAbilityStatLines(ab).join("\n")}`;
     btn.addEventListener("click", () => {
       grantAbility(ab.id);
       sfx("click");
@@ -2909,28 +2919,8 @@
     return btn;
   }
 
-  let abilityTypeFilter = "all";
   let _abilityPickPool = null;
   let _abilityPickFull = false;
-
-  function wireAbilityTypeFilter() {
-    const bar = document.getElementById("ability-type-filter");
-    if (!bar) return;
-    bar.classList.toggle("hidden", !_abilityPickFull);
-    bar.querySelectorAll(".type-filter").forEach((btn) => {
-      btn.classList.toggle("selected", (btn.dataset.abFilter || "all") === abilityTypeFilter);
-      if (btn.dataset.wired) return;
-      btn.dataset.wired = "1";
-      btn.addEventListener("click", () => {
-        abilityTypeFilter = btn.dataset.abFilter || "all";
-        bar.querySelectorAll(".type-filter").forEach((b) => {
-          b.classList.toggle("selected", (b.dataset.abFilter || "all") === abilityTypeFilter);
-        });
-        renderAbilityPickGrid();
-        sfx("ui");
-      });
-    });
-  }
 
   function renderAbilityPickGrid() {
     const grid = el.abilityOptions;
@@ -2939,8 +2929,8 @@
     const order = DATA.ABILITY_DMG_ORDER || ["physical", "magic", "elemental", "bard"];
     const pool = _abilityPickPool;
     if (_abilityPickFull) {
+      // Full catalog: group by type (no filter bar)
       for (const t of order) {
-        if (abilityTypeFilter !== "all" && abilityTypeFilter !== t) continue;
         const list = pool
           .filter((a) => abilityDmgType(a) === t)
           .sort((a, b) => a.name.localeCompare(b.name));
@@ -2949,8 +2939,8 @@
         const head = document.createElement("div");
         head.className = "ab-section-head ab-sec-" + t;
         head.style.color = dm.color;
-        head.innerHTML = `<span class="ab-sec-tag">${dm.short}</span> ${dm.label}` +
-          (t === "elemental" ? ` <em>Fire · Lightning · Ice · Earth</em>` : "");
+        head.innerHTML = `<span class="ab-sec-tag">${dm.label}</span>` +
+          (t === "elemental" ? ` <em>Lửa · Sét · Băng · Đất</em>` : "");
         grid.appendChild(head);
         for (const ab of list) grid.appendChild(createAbilityPickButton(ab, true));
       }
@@ -2975,7 +2965,6 @@
     pendingAbilityResume = "playing";
     state = "ability";
     _abilityPickFull = !!fullCatalog;
-    abilityTypeFilter = "all";
     if (fullCatalog) {
       _abilityPickPool = pool.slice();
     } else {
@@ -2984,17 +2973,22 @@
     if (el.abilityPick) {
       const title = el.abilityPick.querySelector("h2");
       const sub = el.abilityPick.querySelector("p");
-      if (title) title.textContent = fullCatalog ? "TOME OF MASTERY" : "SCROLL OF MASTERY";
+      if (title) title.textContent = fullCatalog ? "SÁCH BẬC THẦY" : "CUỘN BẬC THẦY";
       if (sub) {
         sub.innerHTML = fullCatalog
-          ? `Chọn 1 Ability · filter type · max ${cap}`
-          : `Chọn 1 trong 3 Ability · tối đa ${cap}`;
+          ? `Chọn 1 khả năng · tối đa ${cap}`
+          : `Chọn 1 trong 3 khả năng · tối đa ${cap}`;
       }
     }
     const grid = el.abilityOptions;
-    if (fullCatalog) grid.classList.add("ability-full-list", "ability-by-type");
-    else grid.classList.remove("ability-full-list", "ability-by-type");
-    wireAbilityTypeFilter();
+    const panel = el.abilityPick && el.abilityPick.querySelector(".ability-panel");
+    if (fullCatalog) {
+      grid.classList.add("ability-full-list", "ability-by-type");
+      if (panel) panel.classList.add("ability-panel-fullscreen");
+    } else {
+      grid.classList.remove("ability-full-list", "ability-by-type");
+      if (panel) panel.classList.remove("ability-panel-fullscreen");
+    }
     renderAbilityPickGrid();
     showScreen("ability");
   }
@@ -3130,7 +3124,9 @@
         const ups = (inst.upgradeIds || []).join(", ");
         const stats = formatAbilityStatLines(resolveAbilityDef(inst) || def).join(" · ");
         const dt = abilityDmgMeta(abilityDmgType(def));
-        chip.title = `${def.name} [${dt.label}${def.element ? " · " + def.element : ""}]\n${def.desc || ""}\n${stats}${ups ? "\nUpgrades: " + ups : ""}`;
+        const elMap = { fire: "Lửa", lightning: "Sét", ice: "Băng", earth: "Đất", physical: "Vật lý", magic: "Phép thuật" };
+        const eln = def.element ? (elMap[def.element] || def.element) : "";
+        chip.title = `${def.name} [${dt.label}${eln ? " · " + eln : ""}]\n${def.desc || ""}\n${stats}${ups ? "\nNâng cấp: " + ups : ""}`;
         el.abilityHud.appendChild(chip);
       }
     }
@@ -3139,7 +3135,7 @@
     if (el.abCount) el.abCount.textContent = `${n}/${maxAbilitySlots()}`;
     if (el.abilityStatsList) {
       if (!n) {
-        el.abilityStatsList.innerHTML = `<p class="ab-empty">Chưa có Ability · nhặt Tome (T)</p>`;
+        el.abilityStatsList.innerHTML = `<p class="ab-empty">Chưa có khả năng · nhặt Sách (T)</p>`;
       } else {
         el.abilityStatsList.innerHTML = "";
         for (const inst of list) {
@@ -3150,20 +3146,19 @@
           const isOrbit = def.type === "orbit";
           const ready = isOrbit || inst.cd <= 0;
           const cdText = isOrbit
-            ? "ACTIVE"
+            ? "ĐANG HOẠT ĐỘNG"
             : ready
-              ? "Ready"
-              : `${(inst.cd || 0).toFixed(1)}s`;
+              ? "Sẵn sàng"
+              : `${(inst.cd || 0).toFixed(1)} giây`;
           const resolved = resolveAbilityDef(inst) || def;
           const stats = formatAbilityStatLines(resolved);
           const ups = (inst.upgradeIds || []).length;
-          if (ups) stats.push(`UPG ${ups}/${MAX_ABILITY_UPGRADES}`);
+          if (ups) stats.push(`Nâng cấp ${ups}/${abilityUpgradeCap()}`);
           const statHtml = stats
             .map((line) => {
-              const parts = line.split(" ");
-              const label = parts[0];
-              const val = parts.slice(1).join(" ");
-              return `<span><i>${label}</i><b>${val}</b></span>`;
+              // Keep full label: split on first space after multi-word Vietnamese is hard —
+              // show whole line as value under a generic icon
+              return `<span class="ab-stat-full"><b>${line}</b></span>`;
             })
             .join("");
           const head = document.createElement("div");
@@ -3187,9 +3182,13 @@
           const typeEl = document.createElement("div");
           typeEl.className = "ab-card-type";
           const dt = abilityDmgMeta(abilityDmgType(def));
+          const elMap2 = { fire: "Lửa", lightning: "Sét", ice: "Băng", earth: "Đất", physical: "Vật lý", magic: "Phép thuật" };
+          const eln2 = def.element ? (elMap2[def.element] || def.element) : "";
+          const grp = def.group === "bard" ? "Thi sĩ" : def.group === "boglands" ? "Đầm lầy" : "";
           typeEl.innerHTML =
-            `<span style="color:${dt.color};font-weight:700">${dt.short}</span> · ${def.element || def.type}` +
-            (def.group === "bard" || def.group === "boglands" ? ` · ${def.group}` : "");
+            `<span style="color:${dt.color};font-weight:700">${dt.label}</span>` +
+            (eln2 ? ` · ${eln2}` : "") +
+            (grp ? ` · ${grp}` : "");
 
           const statsEl = document.createElement("div");
           statsEl.className = "ab-card-stats";
@@ -3286,7 +3285,7 @@
     if (stacks > 1) {
       floatingTexts.push({
         x: e.x, y: e.y - e.r - 16,
-        text: `CRIT×${stacks}`, life: 0.45, maxLife: 0.45, color: "#ffd070", vy: -42,
+        text: `CHÍ MẠNG×${stacks}`, life: 0.45, maxLife: 0.45, color: "#ffd070", vy: -42,
       });
     }
     if (def.knockback) applyKnockback(e, player, 1.1);
@@ -3777,9 +3776,9 @@
     else sfx("lose");
     el.endTitle.textContent = won ? "CHIẾN THẮNG!" : "THẤT BẠI";
     el.endTitle.style.color = won ? "#d4a84b" : "#c23b3b";
-    const hallName = (currentHall && currentHall.name) || "Hall";
+    const hallName = (currentHall && currentHall.name) || "Sảnh";
     const timeLabel = formatTime(elapsed);
-    const phaseLabel = phase === "boss" || phase === "boss_announce" || won ? "Boss" : timeLabel;
+    const phaseLabel = phase === "boss" || phase === "boss_announce" || won ? "Chúa tể" : timeLabel;
     const itemN = (player.items || []).length;
 
     // Shards: clear bonus
@@ -3814,8 +3813,8 @@
     updateMetaBar();
 
     el.endStats.textContent =
-      `${player.name} · ${hallName} · ${diffLabel()} · Lv ${player.level} · ${kills} kills · ` +
-      `+${goldBanked}G bank · +${shardsGained} Shards · ${itemN} items · ${phaseLabel} · ${timeLabel}`;
+      `${player.name} · ${hallName} · ${diffLabel()} · Cấp ${player.level} · ${kills} mạng · ` +
+      `+${goldBanked} Vàng ngân hàng · +${shardsGained} Mảnh · ${itemN} trang bị · ${phaseLabel} · ${timeLabel}`;
     showScreen("end");
   }
 
@@ -3873,7 +3872,7 @@
         return u ? u.name : uid;
       });
       const dmg = Math.round((def ? def.damage : 0) * (inst.dmgMul || 1) * (player.abilityDmgMul || 1));
-      return `<li style="color:${def ? def.color : "#ccc"}"><strong>${def ? def.name : inst.id}</strong> · ~${dmg} dmg${ups.length ? " · " + ups.join(", ") : ""}</li>`;
+      return `<li style="color:${def ? def.color : "#ccc"}"><strong>${def ? def.name : inst.id}</strong> · ~${dmg} sát thương${ups.length ? " · " + ups.join(", ") : ""}</li>`;
     });
     const itemLines = (player.items || []).map((entry) => {
       const id = itemIdOf(entry);
@@ -3883,20 +3882,22 @@
       const rm = rarityMeta(rar);
       return `<li style="color:${rm.color || it.color || "#d4a84b"}">${it.name} (${rm.label}) — ${itemDescFor(it, rar)}</li>`;
     });
+    const styleMap = { melee: "cận chiến", arrow: "mũi tên", chain: "xích sét", cone: "nón", projectile: "đạn đạo" };
+    const styleVi = styleMap[player.style] || player.style || "—";
     box.innerHTML = `
-      <h3>Hero · wiki mechanics</h3>
-      <ul><li>${player.name} · Lv ${player.level} · ${player.style || "—"} weapon</li>
-      <li>HP ${Math.ceil(player.hp)}/${Math.round(player.maxHp)} · ATK ${Math.round(player.damage)}</li>
-      <li>Crit ${Math.round((player.critChance || 0) * 100)}% · CritB +${Math.round((player.critBonus || 0) * 100)}% · Multi ${(player.multistrike || 1).toFixed(2)}</li>
-      <li>Def ${Math.round(player.defense || 0)} (~${drPct}% DR) · Block ${Math.round(player.blockStrength || 0)} · Force ${(player.force || 1).toFixed(2)}</li>
-      <li>XP Gain ${Math.round((player.xpGain || 1) * 100)}% · Effect +${Math.round((player.effectChance || 0) * 100)}%</li>
-      <li>Gold ${gold} · Kills ${kills}</li></ul>
-      <h3>Traits / Proficiency</h3>
-      ${traitLines.length ? `<ul>${traitLines.join("")}</ul>` : `<p class="bs-empty">Chưa có trait</p>`}
-      <h3>Abilities</h3>
-      ${abLines.length ? `<ul>${abLines.join("")}</ul>` : `<p class="bs-empty">Chưa có ability</p>`}
-      <h3>Items</h3>
-      ${itemLines.filter(Boolean).length ? `<ul>${itemLines.join("")}</ul>` : `<p class="bs-empty">Chưa có item</p>`}
+      <h3>Anh hùng · chỉ số đầy đủ</h3>
+      <ul><li>${player.name} · Cấp ${player.level} · kiểu ${styleVi}</li>
+      <li>Máu ${Math.ceil(player.hp)}/${Math.round(player.maxHp)} · Sát thương ${Math.round(player.damage)}</li>
+      <li>Tỷ lệ chí mạng ${Math.round((player.critChance || 0) * 100)}% · Sát thương chí mạng +${Math.round((player.critBonus || 0) * 100)}% · Đa đòn ${(player.multistrike || 1).toFixed(2)}</li>
+      <li>Phòng thủ ${Math.round(player.defense || 0)} (~${drPct}% giảm sát thương) · Sức chắn ${Math.round(player.blockStrength || 0)} · Lực đẩy ${(player.force || 1).toFixed(2)}</li>
+      <li>Nhận kinh nghiệm ${Math.round((player.xpGain || 1) * 100)}% · Tỷ lệ hiệu ứng +${Math.round((player.effectChance || 0) * 100)}%</li>
+      <li>Vàng ${gold} · Mạng ${kills}</li></ul>
+      <h3>Thuộc tính / Thành thạo</h3>
+      ${traitLines.length ? `<ul>${traitLines.join("")}</ul>` : `<p class="bs-empty">Chưa có thuộc tính</p>`}
+      <h3>Khả năng</h3>
+      ${abLines.length ? `<ul>${abLines.join("")}</ul>` : `<p class="bs-empty">Chưa có khả năng</p>`}
+      <h3>Trang bị</h3>
+      ${itemLines.filter(Boolean).length ? `<ul>${itemLines.join("")}</ul>` : `<p class="bs-empty">Chưa có trang bị</p>`}
     `;
   }
 
@@ -3948,9 +3949,9 @@
 
   function updateMetaBar() {
     const elG = document.getElementById("meta-gold");
-    if (elG) elG.textContent = `Gold: ${meta.gold || 0}`;
+    if (elG) elG.textContent = `Vàng: ${meta.gold || 0}`;
     const elS = document.getElementById("meta-shards");
-    if (elS) elS.textContent = `Shards: ${meta.shards || 0}`;
+    if (elS) elS.textContent = `Mảnh: ${meta.shards || 0}`;
   }
 
   function saveMenuPrefs() {
@@ -3978,8 +3979,8 @@
     if (artBlock) artBlock.classList.toggle("hidden", !isTorment);
     if (diffLabelEl) {
       diffLabelEl.textContent = isTorment
-        ? "Torment · Level · Artifacts (full mở) · hall random"
-        : "Hall · Thời gian · Agony";
+        ? "Khổ hình · Cấp · Tạo tác (mở hết) · sảnh ngẫu nhiên"
+        : "Sảnh · Thời gian · Khổ hình (Agony)";
     }
     const trLab = document.getElementById("torment-rank-label");
     if (trLab) trLab.textContent = `${pendingArtifacts.length} chọn`;
@@ -4000,10 +4001,10 @@
     }
     if (hint) {
       hint.textContent = isTorment
-        ? "Agony chỉ dùng ở mode Hall"
-        : "Hall only · meter → Rank 1–5 · Champions · +XP";
+        ? "Agony chỉ dùng ở chế độ Sảnh"
+        : "Chỉ Sảnh · thanh → cấp 1–5 · Tinh anh · +kinh nghiệm";
     }
-    if (lab) lab.textContent = "Agony Mode (Hard)";
+    if (lab) lab.textContent = "Bật Khổ hình (khó)";
 
     document.querySelectorAll(".dur-btn").forEach((b) => {
       b.classList.toggle("selected", b.dataset.dur === pendingDurationId);
@@ -4019,14 +4020,14 @@
       b.disabled = !unlocked;
     });
     const tll = document.getElementById("torment-level-label");
-    if (tll) tll.textContent = `Lv ${pendingTormentLevel}`;
+    if (tll) tll.textContent = `Cấp ${pendingTormentLevel}`;
     const tlh = document.getElementById("torment-level-hint");
     if (tlh) {
       const best = meta.tormentBest || 0;
       const next = maxUnlockedTormentLevel();
       tlh.textContent = best
-        ? `Đã clear tới Lv ${best} · mở Lv ${next} · thắng màn mới mở cấp tiếp`
-        : "Chỉ mở Lv 1 · thắng màn để mở Lv 2 · hall random";
+        ? `Đã thắng tới cấp ${best} · mở cấp ${next} · thắng màn mới mở cấp tiếp`
+        : "Chỉ mở cấp 1 · thắng màn để mở cấp 2 · sảnh ngẫu nhiên";
     }
 
     const dur = findDuration(pendingDurationId);
@@ -4036,25 +4037,25 @@
         const maxU = maxUnlockedTormentLevel();
         const an = pendingArtifacts.length;
         pick.innerHTML =
-          `Run: <strong>Torment Lv ${pendingTormentLevel}/${maxU}` +
-          `${an ? ` · A${an}` : ""} · ${dur ? dur.label : "10 phút"} · hall random</strong>`;
+          `Màn: <strong>Khổ hình cấp ${pendingTormentLevel}/${maxU}` +
+          `${an ? ` · ${an} tạo tác` : ""} · ${dur ? dur.label : "10 phút"} · sảnh ngẫu nhiên</strong>`;
       } else {
         const parts = [dur ? dur.label : "5 phút"];
-        if (pendingAgony) parts.push("Agony");
-        pick.innerHTML = `Run: <strong>${parts.join(" · ")}</strong>`;
+        if (pendingAgony) parts.push("Khổ hình (Agony)");
+        pick.innerHTML = `Màn: <strong>${parts.join(" · ")}</strong>`;
       }
     }
     const pickMode = document.getElementById("pick-mode-label");
     if (pickMode) {
       pickMode.innerHTML = isTorment
-        ? `Mode: <strong>Torment Lv ${pendingTormentLevel}</strong>`
-        : `Mode: <strong>Hall</strong>`;
+        ? `Chế độ: <strong>Khổ hình cấp ${pendingTormentLevel}</strong>`
+        : `Chế độ: <strong>Sảnh</strong>`;
     }
     const pickHall = document.getElementById("pick-hall-label");
     if (pickHall && isTorment) {
-      pickHall.innerHTML = `Hall: <strong>Random</strong>`;
+      pickHall.innerHTML = `Sảnh: <strong>Ngẫu nhiên</strong>`;
     } else if (pickHall && pendingHallId && HALLS[pendingHallId]) {
-      pickHall.innerHTML = `Hall: <strong>${HALLS[pendingHallId].name}</strong>`;
+      pickHall.innerHTML = `Sảnh: <strong>${HALLS[pendingHallId].name}</strong>`;
     }
     updateStartButton();
     updateMetaBar();
@@ -4203,12 +4204,21 @@
         + (equipped ? " maxed" : "")
         + (!owned && (meta.gold || 0) < (m.cost || 600) ? " cannot-afford" : "");
       const costLine = !owned
-        ? `${m.cost || 600}G`
-        : (equipped ? "EQUIPPED · click to unequip" : "OWNED · click to equip (any hero)");
-      btn.innerHTML =
+        ? `${m.cost || 600} Vàng`
+        : (equipped ? "ĐANG ĐEO · bấm để tháo" : "ĐÃ MUA · bấm để đeo (mọi anh hùng)");
+      const icon = document.createElement("canvas");
+      icon.className = "camp-card-icon";
+      if (typeof window.HOT_ART !== "undefined" && window.HOT_ART.paintMarkIcon) {
+        window.HOT_ART.paintMarkIcon(icon, id, m.color || "#c080e0", 40);
+      }
+      const body = document.createElement("div");
+      body.className = "camp-card-body";
+      body.innerHTML =
         `<strong style="color:${m.color || "#d4a84b"}">${m.name}</strong>` +
         `<span>${m.desc}</span>` +
         `<span class="camp-cost">${costLine}</span>`;
+      btn.appendChild(icon);
+      btn.appendChild(body);
       btn.disabled = false;
       btn.addEventListener("click", () => {
         if (!owned) {
@@ -4425,7 +4435,7 @@
         btn.innerHTML =
           `<strong style="color:${it.color || "#d4a84b"}">${it.name}</strong>` +
           `<span>${it.desc}</span>` +
-          `<span class="camp-cost">${on ? "EQUIPPED (Common)" : "tap · start Common"}</span>`;
+          `<span class="camp-cost">${on ? "ĐANG ĐEO (Thường)" : "bấm · bắt đầu độ Thường"}</span>`;
         btn.addEventListener("click", () => toggleLoadoutItem(id));
         grid.appendChild(btn);
       }
@@ -4730,8 +4740,9 @@
     updateDiffUI();
     updateStartButton();
     saveMeta();
+    const presetNames = { none: "Không", light: "Nhẹ", pain: "Đau", chaos: "Hỗn loạn" };
     toast(
-      key === "none" ? "Artifacts: None" : `Preset ${key}: ${pendingArtifacts.length} art`,
+      key === "none" ? "Tạo tác: Không" : `Gói ${presetNames[key] || key}: ${pendingArtifacts.length} tạo tác`,
       key === "pain" || key === "chaos" ? "warn" : "good"
     );
   }
@@ -4768,8 +4779,17 @@
       btn.className = "art-btn" + (pendingArtifacts.includes(id) ? " selected" : "");
       btn.dataset.art = id;
       btn.disabled = false;
-      btn.innerHTML = `<strong style="color:${a.color || "#c080e0"}">${a.name}</strong>${a.desc || ""}`;
-      btn.title = `${a.name}: ${a.desc} · full mở`;
+      btn.title = `${a.name}: ${a.desc || ""}`;
+      const icon = document.createElement("canvas");
+      icon.className = "art-btn-icon";
+      if (window.HOT_ART && window.HOT_ART.paintArtifactIcon) {
+        window.HOT_ART.paintArtifactIcon(icon, id, a.color || "#e06080", 36);
+      }
+      const lab = document.createElement("div");
+      lab.className = "art-btn-body";
+      lab.innerHTML = `<strong style="color:${a.color || "#c080e0"}">${a.name}</strong><span>${a.desc || ""}</span>`;
+      btn.appendChild(icon);
+      btn.appendChild(lab);
       btn.addEventListener("click", () => {
         const i = pendingArtifacts.indexOf(id);
         if (i >= 0) pendingArtifacts.splice(i, 1);
@@ -5548,7 +5568,7 @@
       ctx.font = "bold 11px Segoe UI";
       ctx.fillStyle = "#a0e0ff";
       ctx.textAlign = "center";
-      ctx.fillText("WELL", sx, sy - w.r - 8);
+      ctx.fillText("GIẾNG", sx, sy - w.r - 8);
     }
   }
 
@@ -5574,7 +5594,7 @@
     if (player.items.some((e) => itemIdOf(e) === itemId) && slot !== "ring") {
       floatingTexts.push({
         x: player.x, y: player.y - 42,
-        text: "Already equipped", life: 0.9, maxLife: 0.9, color: "#a09080", vy: -20,
+        text: "Đã trang bị", life: 0.9, maxLife: 0.9, color: "#a09080", vy: -20,
       });
       return;
     }
@@ -5615,10 +5635,10 @@
     el.upgradeOptions.innerHTML = "";
     const title = el.levelup && el.levelup.querySelector("h2");
     const sub = document.getElementById("levelup-sub") || (el.levelup && el.levelup.querySelector("p"));
-    if (title) title.textContent = chestRarity >= 3 ? "BOSS CHEST" : chestRarity >= 2 ? "RARE CHEST" : "CHEST";
+    if (title) title.textContent = chestRarity >= 3 ? "RƯƠNG CHÚA TỂ" : chestRarity >= 2 ? "RƯƠNG HIẾM" : "RƯƠNG";
     if (sub) {
       sub.innerHTML =
-        `Chọn 1 Item · Common/Uncommon/Rare · <span style="color:#d4a84b">${ITEM_ORDER.length} base</span>`;
+        `Chọn 1 trang bị · Thường / Hiếm vừa / Cực hiếm · <span style="color:#d4a84b">${ITEM_ORDER.length} món gốc</span>`;
     }
     options.forEach((opt) => {
       const it = ITEMS[opt.id];
@@ -5640,7 +5660,7 @@
       titleEl.innerHTML = `${it.name}<span class="rar-badge" style="color:${rm.color}">${rm.label}</span>`;
       const metaEl = document.createElement("span");
       metaEl.style.color = rm.color;
-      metaEl.textContent = `${slotLab} · effect riêng theo rarity`;
+      metaEl.textContent = `${slotLab} · hiệu ứng riêng theo độ hiếm`;
       const descEl = document.createElement("span");
       descEl.textContent = itemDescFor(it, opt.rarity);
       body.appendChild(titleEl);
@@ -6403,19 +6423,21 @@
     const moveMul = (player.skillActive > 0 && player.skillId === "ringblades" ? 1.15 : 1) * chillMul * itemMs;
     player.moving = !!(mx || my);
     if (mx || my) {
-      const len = Math.hypot(mx, my);
+      const len = Math.hypot(mx, my) || 1;
       mx /= len;
       my /= len;
-      player._lastMx = mx * player.speed * moveMul * dt;
-      player._lastMy = my * player.speed * moveMul * dt;
-      if (mx !== 0) player.facing = mx > 0 ? 1 : -1;
-      player.x = clamp(player.x + mx * player.speed * moveMul * dt, player.r + 8, MAP_W - player.r - 8);
-      player.y = clamp(player.y + my * player.speed * moveMul * dt, player.r + 8, MAP_H - player.r - 8);
-      player.bob += dt * 12;
+      // Facing hysteresis: chỉ đổi khi trục X rõ
+      if (Math.abs(mx) > 0.25) player.facing = mx > 0 ? 1 : -1;
+      const step = player.speed * moveMul * dt;
+      player._lastMx = mx * step;
+      player._lastMy = my * step;
+      player.x = clamp(player.x + player._lastMx, player.r + 8, MAP_W - player.r - 8);
+      player.y = clamp(player.y + player._lastMy, player.r + 8, MAP_H - player.r - 8);
+      player.bob += dt * 10;
     } else {
       player._lastMx = 0;
       player._lastMy = 0;
-      player.bob *= 0.9;
+      player.bob *= 0.85;
     }
 
     if (player.invuln > 0) player.invuln -= dt;
@@ -6477,17 +6499,21 @@
         updateTypedEnemy(e, dt, frostMul);
       }
 
-      // soft separation
+      // soft separation (gentler — tránh rung / bật vị trí)
       for (const o of enemies) {
         if (o === e) continue;
         const od = dist(e, o);
         const minD = e.r + o.r - 2;
         if (od < minD && od > 0.01) {
-          const push = ((minD - od) / od) * (e.isBoss ? 0.15 : 0.5);
-          e.x -= (o.x - e.x) * push * dt * 8;
-          e.y -= (o.y - e.y) * push * dt * 8;
+          const push = ((minD - od) / od) * (e.isBoss ? 0.1 : 0.28);
+          e.x -= (o.x - e.x) * push * dt * 5;
+          e.y -= (o.y - e.y) * push * dt * 5;
         }
       }
+
+      // luôn kẹp trong map
+      e.x = clamp(e.x, e.r + 2, MAP_W - e.r - 2);
+      e.y = clamp(e.y, e.r + 2, MAP_H - e.r - 2);
 
       if (e.ai === "charge") {
         const dPlayer = dist(e, player);
@@ -6670,12 +6696,12 @@
     el.hpFill.style.width = `${clamp((player.hp / player.maxHp) * 100, 0, 100)}%`;
     el.xpFill.style.width = `${clamp((player.xp / player.xpNext) * 100, 0, 100)}%`;
     el.hpText.textContent = `${Math.ceil(player.hp)}/${Math.round(player.maxHp)}`;
-    el.lvlText.textContent = `Lv ${player.level}`;
+    el.lvlText.textContent = `Cấp ${player.level}`;
     el.kills.textContent = isBoglandsRun()
-      ? `Kills: ${kills}/${bogKillTarget()}`
-      : `Kills: ${kills}`;
-    if (el.goldText) el.goldText.textContent = `Gold: ${gold}`;
-    if (el.shardsHud) el.shardsHud.textContent = `Shards: ${runShards}`;
+      ? `Mạng: ${kills}/${bogKillTarget()}`
+      : `Mạng: ${kills}`;
+    if (el.goldText) el.goldText.textContent = `Vàng: ${gold}`;
+    if (el.shardsHud) el.shardsHud.textContent = `Mảnh: ${runShards}`;
     if (el.diffText) {
       let t = diffLabel();
       if (playMode === "hall" && agonyEnabled && agonyRank < (AGONY_CFG.maxRank || 5)) {
@@ -6688,13 +6714,13 @@
     updateRunPills();
 
     if (phase === "boss" || phase === "boss_announce") {
-      el.waveText.textContent = "BOSS";
+      el.waveText.textContent = "CHÚA TỂ";
     } else if (isBoglandsRun()) {
-      const hallShort = currentHall ? currentHall.name : "Hall";
+      const hallShort = currentHall ? currentHall.name : "Sảnh";
       el.waveText.textContent = `${hallShort} · ${kills}/${bogKillTarget()}`;
     } else {
       const left = Math.max(0, RUN_DURATION_SEC - elapsed);
-      const hallShort = currentHall ? currentHall.name : "Hall";
+      const hallShort = currentHall ? currentHall.name : "Sảnh";
       el.waveText.textContent = `${hallShort} · ${formatTime(left)}`;
     }
 
@@ -6706,11 +6732,11 @@
     // Status panel (top-left)
     if (el.stClass) {
       el.stClass.textContent = player.name;
-      el.stLevel.textContent = `Lv ${player.level}`;
+      el.stLevel.textContent = `Cấp ${player.level}`;
       el.stHp.textContent = `${Math.ceil(player.hp)}/${Math.round(player.maxHp)}`;
       el.stAtk.textContent = String(Math.round(player.damage));
       const aps = player.attackCooldown > 0 ? 1 / player.attackCooldown : 0;
-      el.stAsp.textContent = `${aps.toFixed(2)}/s`;
+      el.stAsp.textContent = `${aps.toFixed(2)}/giây`;
       el.stSpd.textContent = String(Math.round(player.speed));
       const rng = player.style === "melee"
         ? Math.round(player.attackRange * (player.meleeArc || 1))
@@ -6747,11 +6773,9 @@
     ctx.closePath();
   }
 
-  function drawShadow(x, y, rx, ry) {
-    ctx.fillStyle = "rgba(0,0,0,0.4)";
-    ctx.beginPath();
-    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
-    ctx.fill();
+  /** Shadows disabled (cleaner look) */
+  function drawShadow(/* x, y, rx, ry */) {
+    /* no-op */
   }
 
   function drawHpBar(x, y, w, h, pct, color) {
@@ -6764,7 +6788,7 @@
   }
 
   function drawFloor() {
-    const tile = 56;
+    const tile = 64;
     const startX = Math.floor(camera.x / tile) * tile;
     const startY = Math.floor(camera.y / tile) * tile;
     const theme = (currentHall && currentHall.theme) || {
@@ -6774,147 +6798,99 @@
       prop: "#1a1524", propLite: "#3a3050", glow: "rgba(140,80,180,0.15)",
     };
     const style = theme.style || "cavern";
+    const a = theme.floorA || "#14101c";
+    const b = theme.floorB || "#100e16";
 
-    ctx.fillStyle = theme.floorC || theme.floorB || "#0a0812";
+    // Nền phẳng + checker nhẹ (không chi tiết rối)
+    ctx.fillStyle = theme.floorC || b;
     ctx.fillRect(0, 0, W, H);
 
     for (let x = startX; x < camera.x + W + tile; x += tile) {
       for (let y = startY; y < camera.y + H + tile; y += tile) {
         const gx = (x / tile) | 0;
         const gy = (y / tile) | 0;
-        const h = ((gx * 13 + gy * 7) % 5);
-        const a = theme.floorA || "#14101c";
-        const b = theme.floorB || "#100e16";
-        const c = theme.floorC || b;
-        const base = h === 0 ? a : h === 1 ? b : h === 2 ? a : h === 3 ? c : b;
         const sx = x - camera.x;
         const sy = y - camera.y;
-        ctx.fillStyle = base;
+        const odd = (gx + gy) & 1;
+        ctx.fillStyle = odd ? a : b;
         ctx.fillRect(sx, sy, tile, tile);
-
-        ctx.strokeStyle = "rgba(10, 8, 16, 0.75)";
+        // viền mảnh, thấp contrast
+        ctx.strokeStyle = "rgba(0,0,0,0.22)";
         ctx.lineWidth = 1;
         ctx.strokeRect(sx + 0.5, sy + 0.5, tile - 1, tile - 1);
-
-        // style-specific floor details
-        if (style === "ember") {
-          if (((gx * 9 + gy * 17) % 7) === 0) {
-            ctx.fillStyle = theme.ritual || "rgba(255,80,20,0.25)";
-            ctx.beginPath();
-            ctx.moveTo(sx + 8, sy + 20);
-            ctx.lineTo(sx + 28, sy + 12);
-            ctx.lineTo(sx + 44, sy + 30);
-            ctx.lineTo(sx + 20, sy + 42);
-            ctx.fill();
-          }
-          if (((gx + gy) % 5) === 0) {
-            ctx.strokeStyle = "rgba(255,100,40,0.35)";
-            ctx.beginPath();
-            ctx.moveTo(sx + 10, sy + 14);
-            ctx.lineTo(sx + 30, sy + 36);
-            ctx.lineTo(sx + 48, sy + 28);
-            ctx.stroke();
-          }
-        } else if (style === "frozen") {
-          if (((gx * 5 + gy * 11) % 6) === 0) {
-            ctx.strokeStyle = "rgba(180,230,255,0.22)";
-            ctx.beginPath();
-            ctx.moveTo(sx + 6, sy + 10);
-            ctx.lineTo(sx + 28, sy + 40);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(sx + 40, sy + 8);
-            ctx.lineTo(sx + 16, sy + 44);
-            ctx.stroke();
-          }
-          if (((gx * 3 + gy) % 8) === 0) {
-            ctx.fillStyle = "rgba(200,240,255,0.12)";
-            ctx.beginPath();
-            ctx.ellipse(sx + 28, sy + 28, 16, 10, 0.3, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        } else if (style === "bog") {
-          if (((gx * 7 + gy * 13) % 5) === 0) {
-            ctx.fillStyle = "rgba(40,90,50,0.35)";
-            ctx.beginPath();
-            ctx.ellipse(sx + 28, sy + 30, 18, 10, 0.2, 0, Math.PI * 2);
-            ctx.fill();
-          }
-          if (((gx + gy * 3) % 9) === 0) {
-            ctx.fillStyle = "rgba(80,140,60,0.2)";
-            ctx.beginPath();
-            ctx.ellipse(sx + 18, sy + 20, 10, 5, 0, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        } else if (style === "viaduct") {
-          // stone brick pattern
-          ctx.strokeStyle = "rgba(80,90,110,0.25)";
-          ctx.beginPath();
-          ctx.moveTo(sx, sy + tile / 2);
-          ctx.lineTo(sx + tile, sy + tile / 2);
-          ctx.moveTo(sx + tile / 2 + (gy % 2) * 14 - 7, sy);
-          ctx.lineTo(sx + tile / 2 + (gy % 2) * 14 - 7, sy + tile);
-          ctx.stroke();
-          if (((gx * 5 + gy * 9) % 11) === 0) {
-            ctx.fillStyle = "rgba(140,160,200,0.08)";
-            ctx.fillRect(sx + 8, sy + 8, tile - 16, tile - 16);
-          }
-        } else if (style === "dissonance") {
-          if (((gx + gy) % 3) === 0) {
-            ctx.fillStyle = `hsla(${280 + ((gx * 17 + gy * 23) % 60)}, 45%, 22%, 0.35)`;
-            ctx.beginPath();
-            ctx.moveTo(sx + 8 + (gx % 5), sy + 6);
-            ctx.lineTo(sx + 48, sy + 12 + (gy % 7));
-            ctx.lineTo(sx + 40, sy + 48);
-            ctx.lineTo(sx + 4, sy + 40);
-            ctx.fill();
-          }
-        } else if (style === "vault") {
-          ctx.strokeStyle = "rgba(212,168,75,0.12)";
-          ctx.strokeRect(sx + 4, sy + 4, tile - 8, tile - 8);
-          if (((gx * 3 + gy * 7) % 10) === 0) {
-            ctx.fillStyle = "rgba(212,168,75,0.15)";
-            ctx.beginPath();
-            ctx.arc(sx + 28, sy + 28, 6, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        } else {
-          // cavern: crystals / blood-violet stains
-          if (((gx * 17 + gy * 31) % 5) === 0) {
-            ctx.fillStyle = "rgba(70, 45, 100, 0.25)";
-            ctx.fillRect(sx + 10, sy + 14, 12, 7);
-            ctx.fillRect(sx + 28, sy + 32, 9, 6);
-          }
-          if (((gx * 9 + gy * 19) % 11) === 0) {
-            ctx.fillStyle = theme.ritual || "rgba(120, 40, 160, 0.2)";
-            ctx.beginPath();
-            ctx.ellipse(sx + 30, sy + 28, 14, 8, 0.4, 0, Math.PI * 2);
-            ctx.fill();
-          }
-          if (((gx * 5 + gy * 11) % 9) === 0) {
-            ctx.strokeStyle = "rgba(100, 60, 160, 0.3)";
-            ctx.beginPath();
-            ctx.moveTo(sx + 8, sy + 12);
-            ctx.lineTo(sx + 22, sy + 28);
-            ctx.lineTo(sx + 40, sy + 22);
-            ctx.stroke();
-          }
-        }
       }
     }
 
-    // Ambient vignette / glow
-    if (theme.glow) {
-      const g = ctx.createRadialGradient(W * 0.5, H * 0.45, 40, W * 0.5, H * 0.45, Math.max(W, H) * 0.7);
-      g.addColorStop(0, theme.glow);
-      g.addColorStop(1, "transparent");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, H);
+    // Accent theo hall — rất thưa
+    ctx.globalAlpha = 0.12;
+    if (style === "ember") {
+      ctx.fillStyle = "#e05020";
+      for (let i = 0; i < 6; i++) {
+        const px = ((i * 317) % MAP_W) - camera.x;
+        const py = ((i * 491) % MAP_H) - camera.y;
+        if (px > -20 && px < W + 20 && py > -20 && py < H + 20) {
+          ctx.beginPath();
+          ctx.ellipse(px, py, 28, 10, 0.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    } else if (style === "frozen") {
+      ctx.fillStyle = "#80c0e0";
+      for (let i = 0; i < 5; i++) {
+        const px = ((i * 401) % MAP_W) - camera.x;
+        const py = ((i * 277) % MAP_H) - camera.y;
+        if (px > -20 && px < W + 20 && py > -20 && py < H + 20) {
+          ctx.beginPath();
+          ctx.ellipse(px, py, 22, 8, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    } else if (style === "bog") {
+      ctx.fillStyle = "#406048";
+      for (let i = 0; i < 5; i++) {
+        const px = ((i * 353) % MAP_W) - camera.x;
+        const py = ((i * 439) % MAP_H) - camera.y;
+        if (px > -20 && px < W + 20 && py > -20 && py < H + 20) {
+          ctx.beginPath();
+          ctx.ellipse(px, py, 26, 12, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
     }
+    ctx.globalAlpha = 1;
 
-    // decorative props matching hall
-    drawHallProps(theme, style);
-    drawMapDecor(theme);
+    // Ít props (không trang trí dày)
+    drawHallPropsSparse(theme, style);
+  }
+
+  /** Props thưa — 4–6 cột, không decor rác */
+  function drawHallPropsSparse(theme, style) {
+    const pillars = [
+      [280, 260], [1900, 260], [280, 1140], [1900, 1140],
+      [1100, 200], [1100, 1200],
+    ];
+    const prop = theme.prop || "#1a1524";
+    const lite = theme.propLite || "#3a3050";
+    for (let i = 0; i < pillars.length; i++) {
+      const [px, py] = pillars[i];
+      const sx = px - camera.x;
+      const sy = py - camera.y;
+      if (sx < -40 || sy < -60 || sx > W + 40 || sy > H + 60) continue;
+      ctx.fillStyle = prop;
+      ctx.fillRect(sx - 10, sy - 32, 20, 42);
+      ctx.fillStyle = lite;
+      ctx.fillRect(sx - 4, sy - 20, 8, 22);
+      if (style === "vault") {
+        ctx.fillStyle = "rgba(212,168,75,0.2)";
+        ctx.fillRect(sx - 3, sy - 24, 6, 20);
+      } else if (style === "ember") {
+        ctx.fillStyle = "rgba(255,80,20,0.2)";
+        ctx.fillRect(sx - 2, sy + 4, 4, 8);
+      } else if (style === "frozen") {
+        ctx.fillStyle = "rgba(160,220,255,0.25)";
+        ctx.fillRect(sx - 3, sy - 28, 6, 30);
+      }
+    }
   }
 
   function drawHallProps(theme, style) {
@@ -7097,37 +7073,72 @@
     };
   }
 
+  function softFill(color, x0, y0, x1, y1) {
+    if (window.HOT_ART && !arguments[5]) {
+      const g = ctx.createLinearGradient(x0, y0, x1, y1);
+      g.addColorStop(0, window.HOT_ART.shade(color, 0.2));
+      g.addColorStop(1, window.HOT_ART.shade(color, -0.15));
+      return g;
+    }
+    return color;
+  }
+
+  function strokeSoftOutline() {
+    ctx.strokeStyle = "rgba(8,6,12,0.55)";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
+
   function drawHeroLegs(x, by, f, pal, flash, stride) {
     const s = stride || 0;
-    ctx.fillStyle = flash ? "#fff" : pal.dark;
-    ctx.fillRect(x - 7, by + 6, 5, 10 + (s > 0 ? 1 : 0));
-    ctx.fillRect(x + 2, by + 6 + s, 5, 10 - s);
+    const dark = flash ? "#fff" : pal.dark;
+    ctx.fillStyle = softFill(dark, x - 8, by + 6, x + 8, by + 18);
+    roundRect(x - 7, by + 6, 5, 10 + (s > 0 ? 1 : 0), 2);
+    ctx.fill();
+    roundRect(x + 2, by + 6 + s, 5, 10 - s, 2);
+    ctx.fill();
     ctx.fillStyle = flash ? "#fff" : "#2a2030";
-    ctx.fillRect(x - 8, by + 14, 6, 4);
-    ctx.fillRect(x + 2, by + 14 + s, 6, 4);
+    roundRect(x - 8, by + 14, 6, 4, 1.5);
+    ctx.fill();
+    roundRect(x + 2, by + 14 + s, 6, 4, 1.5);
+    ctx.fill();
   }
 
   function drawHeroHead(x, by, f, pal, flash, opts) {
     opts = opts || {};
-    ctx.fillStyle = flash ? "#fff" : pal.skin;
-    ctx.beginPath();
-    ctx.arc(x, by - 12, opts.bigHead ? 7.5 : 6.5, 0, Math.PI * 2);
-    ctx.fill();
+    const skin = flash ? "#fff" : pal.skin;
+    const r = opts.bigHead ? 7.5 : 6.5;
+    if (!flash && window.HOT_ART) {
+      window.HOT_ART.softDisc(ctx, x, by - 12, r, skin, window.HOT_ART.shade(skin, 0.25));
+    } else {
+      ctx.fillStyle = skin;
+      ctx.beginPath();
+      ctx.arc(x, by - 12, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
     // eyes
     ctx.fillStyle = opts.glowEyes ? pal.accent : "#1a1010";
     ctx.beginPath();
     ctx.arc(x - 2.2 * f, by - 12, opts.glowEyes ? 1.8 : 1.4, 0, Math.PI * 2);
     ctx.arc(x + 2.5 * f, by - 12, opts.glowEyes ? 1.8 : 1.4, 0, Math.PI * 2);
     ctx.fill();
+    if (opts.glowEyes) {
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.beginPath();
+      ctx.arc(x - 2.5 * f, by - 12.5, 0.6, 0, Math.PI * 2);
+      ctx.arc(x + 2.2 * f, by - 12.5, 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
     if (opts.hood) {
-      ctx.fillStyle = flash ? "#fff" : pal.dark;
+      ctx.fillStyle = flash ? "#fff" : softFill(pal.dark, x - 9, by - 20, x + 9, by - 8);
       ctx.beginPath();
       ctx.arc(x, by - 14, 9, Math.PI * 1.05, Math.PI * 1.95);
       ctx.fill();
-      ctx.fillRect(x - 9, by - 14, 18, 5);
+      roundRect(x - 9, by - 14, 18, 5, 2);
+      ctx.fill();
     }
     if (opts.helm) {
-      ctx.fillStyle = flash ? "#fff" : pal.armor;
+      ctx.fillStyle = flash ? "#fff" : softFill(pal.armor, x - 8, by - 20, x + 8, by - 10);
       roundRect(x - 8, by - 20, 16, 10, 3);
       ctx.fill();
       ctx.fillStyle = "#1a1018";
@@ -7141,7 +7152,8 @@
       ctx.beginPath();
       ctx.ellipse(x, by - 18, 10, 4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillRect(x - 3, by - 26, 6, 10);
+      roundRect(x - 3, by - 26, 6, 10, 2);
+      ctx.fill();
     }
     if (opts.crown) {
       ctx.fillStyle = flash ? "#fff" : pal.accent;
@@ -7153,6 +7165,7 @@
       ctx.lineTo(x + 7, by - 16);
       ctx.closePath();
       ctx.fill();
+      strokeSoftOutline();
     }
     if (opts.beard) {
       ctx.fillStyle = flash ? "#fff" : "#d0d0d8";
@@ -7165,7 +7178,17 @@
   }
 
   function drawHeroTorso(x, by, lean, pal, flash, shape) {
-    ctx.fillStyle = flash ? "#fff" : pal.armor;
+    const armor = flash ? "#ffffff" : pal.armor;
+    const accent = flash ? "#ffffff" : pal.accent;
+    // Soft gradient body (design system)
+    if (!flash && window.HOT_ART) {
+      const g = ctx.createLinearGradient(x - 10, by - 8, x + 10, by + 16);
+      g.addColorStop(0, window.HOT_ART.shade(armor, 0.18));
+      g.addColorStop(1, window.HOT_ART.shade(armor, -0.12));
+      ctx.fillStyle = g;
+    } else {
+      ctx.fillStyle = armor;
+    }
     if (shape === "robe") {
       ctx.beginPath();
       ctx.moveTo(x - 10 + lean, by - 6);
@@ -7174,7 +7197,7 @@
       ctx.lineTo(x - 13, by + 16);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = flash ? "#fff" : pal.accent;
+      ctx.fillStyle = accent;
       ctx.globalAlpha = 0.45;
       ctx.beginPath();
       ctx.moveTo(x - 3 + lean, by - 6);
@@ -7187,7 +7210,7 @@
     } else {
       roundRect(x - 9 + lean * 0.4, by - 8, 18, 16, 3);
       ctx.fill();
-      ctx.fillStyle = flash ? "#fff" : pal.accent;
+      ctx.fillStyle = accent;
       ctx.globalAlpha = 0.55;
       roundRect(x - 6 + lean * 0.4, by - 5, 12, 5, 2);
       ctx.fill();
@@ -7798,20 +7821,21 @@
       skin: "#e8c8a0", armor: player.color, accent: player.color, dark: "#2a2030", weapon: "#aaa",
     };
 
+    // Vector soft combat (design system) — no pixel sprites
     const drawer = HERO_DRAWERS[player.classId];
     if (drawer) {
-      drawer(px, py, facing, bob, flash, skillOn, pose, pal);
+      drawer(px, py, facing, bob * 0.35, flash, skillOn, pose, pal);
     } else {
-      drawSwordsmanHero(px, py, facing, bob, flash, skillOn, pose, pal);
+      drawSwordsmanHero(px, py, facing, bob * 0.35, flash, skillOn, pose, pal);
     }
 
     // name tag
     ctx.font = "bold 10px Segoe UI";
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.fillText(player.name, px + 1, py - 32);
+    ctx.fillText(player.name, px + 1, py - 36);
     ctx.fillStyle = player.color;
-    ctx.fillText(player.name, px, py - 33);
+    ctx.fillText(player.name, px, py - 37);
 
     // subtle melee range for close-range heroes
     const meleeStyles = ["melee", "hammer", "dualaxe", "lute", "scepter"];
@@ -8190,104 +8214,131 @@
     drawHpBar(lx, by - e.r - 12, e.r * 2.4, 4, e.hp / e.maxHp, "#a050d0");
   }
 
-  /** Final boss Lord of Torment — claw swipe frames */
+  /** Soft boss — vector design system (no pixel) */
   function drawBossSprite(x, y, e) {
     const flash = e.hitFlash > 0;
     const pose = enemyAtkPose(e);
-    const bob = pose.phase >= 0 ? 0 : Math.sin(elapsed * 2.2) * 2;
-    const lean = pose.phase === 0 ? -4 : pose.phase === 1 ? 8 : 0;
-    const by = y + bob;
-    const facing = player.x >= e.x ? 1 : -1;
-    const lx = x + lean * facing * 0.25;
+    const by = y; // no bob — ổn định
+    if (e.facing == null) e.facing = player.x >= e.x ? 1 : -1;
+    if (Math.abs(player.x - e.x) > 16) e.facing = player.x >= e.x ? 1 : -1;
+    const facing = e.facing;
+    const lean = pose.phase === 1 ? 4 * facing : pose.phase === 0 ? -2 * facing : 0;
+    const lx = x + lean * 0.2;
 
-    const bossCol = e.color || "#8b2040";
-    ctx.globalAlpha = 0.3 + Math.sin(elapsed * 3) * 0.1;
-    const grd = ctx.createRadialGradient(lx, by, 10, lx, by, e.r + 28);
+    const bossCol = flash ? "#ffffff" : (e.color || "#8b2040");
+    const dark = flash ? "#eee" : shadeColor(bossCol, -0.35);
+    const lite = flash ? "#fff" : shadeColor(bossCol, 0.2);
+    const gold = (window.HOT_ART && window.HOT_ART.TOKENS.gold) || "#d4a84b";
+
+    // soft aura
+    ctx.globalAlpha = 0.28;
+    const grd = ctx.createRadialGradient(lx, by, 8, lx, by, e.r + 32);
     grd.addColorStop(0, bossCol);
-    grd.addColorStop(1, "rgba(0,0,0,0)");
+    grd.addColorStop(1, "transparent");
     ctx.fillStyle = grd;
     ctx.beginPath();
-    ctx.arc(lx, by, e.r + 28, 0, Math.PI * 2);
+    ctx.arc(lx, by, e.r + 32, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    drawShadow(x, y + 28, 30, 9);
+    // wings soft
+    const wingFlap = pose.phase === 1 ? 10 : Math.sin(elapsed * 2.5) * 5;
+    ctx.fillStyle = dark;
+    ctx.beginPath();
+    ctx.moveTo(lx - 8, by - 6);
+    ctx.quadraticCurveTo(lx - 48, by - 36 - wingFlap, lx - 52, by + 8);
+    ctx.quadraticCurveTo(lx - 28, by + 2, lx - 6, by + 8);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(lx + 8, by - 6);
+    ctx.quadraticCurveTo(lx + 48, by - 36 - wingFlap, lx + 52, by + 8);
+    ctx.quadraticCurveTo(lx + 28, by + 2, lx + 6, by + 8);
+    ctx.fill();
+    ctx.fillStyle = lite;
+    ctx.globalAlpha = 0.45;
+    ctx.beginPath();
+    ctx.moveTo(lx - 10, by - 2);
+    ctx.quadraticCurveTo(lx - 36, by - 22 - wingFlap, lx - 44, by + 2);
+    ctx.lineTo(lx - 10, by + 4);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(lx + 10, by - 2);
+    ctx.quadraticCurveTo(lx + 36, by - 22 - wingFlap, lx + 44, by + 2);
+    ctx.lineTo(lx + 10, by + 4);
+    ctx.fill();
+    ctx.globalAlpha = 1;
 
-    // wings
-    const wingFlap = pose.phase === 1 ? 14 : Math.sin(elapsed * 3) * 8;
-    ctx.fillStyle = flash ? "#fff" : shadeColor(bossCol, -0.45);
-    ctx.beginPath();
-    ctx.moveTo(lx - 10, by - 8);
-    ctx.quadraticCurveTo(lx - 50, by - 40 - wingFlap, lx - 55, by + 10);
-    ctx.quadraticCurveTo(lx - 30, by + 4, lx - 8, by + 10);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(lx + 10, by - 8);
-    ctx.quadraticCurveTo(lx + 50, by - 40 - wingFlap, lx + 55, by + 10);
-    ctx.quadraticCurveTo(lx + 30, by + 4, lx + 8, by + 10);
-    ctx.fill();
-    ctx.fillStyle = flash ? "#fff" : "rgba(160,30,50,0.5)";
-    ctx.beginPath();
-    ctx.moveTo(lx - 12, by - 4);
-    ctx.quadraticCurveTo(lx - 40, by - 28 - wingFlap, lx - 48, by + 4);
-    ctx.lineTo(lx - 12, by + 6);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(lx + 12, by - 4);
-    ctx.quadraticCurveTo(lx + 40, by - 28 - wingFlap, lx + 48, by + 4);
-    ctx.lineTo(lx + 12, by + 6);
-    ctx.fill();
-
-    // Claw arm (attacking side)
+    // claw arm
     let clawRot;
-    if (pose.phase === 0) clawRot = (-1.4 - pose.p * 0.5) * facing;
-    else if (pose.phase === 1) clawRot = (-1.9 + pose.p * 3.2) * facing;
-    else if (pose.phase === 2) clawRot = (1.3 - pose.p * 0.9) * facing;
-    else clawRot = 0.2 * facing;
+    if (pose.phase === 0) clawRot = (-1.2 - pose.p * 0.4) * facing;
+    else if (pose.phase === 1) clawRot = (-1.7 + pose.p * 2.8) * facing;
+    else if (pose.phase === 2) clawRot = (1.1 - pose.p * 0.8) * facing;
+    else clawRot = 0.15 * facing;
 
     ctx.save();
-    ctx.translate(lx + 22 * facing, by);
+    ctx.translate(lx + 20 * facing, by);
     ctx.rotate(clawRot);
-    ctx.fillStyle = flash ? "#fff" : "#6a1830";
-    ctx.fillRect(-4, -6, 8, 22);
-    ctx.fillStyle = flash ? "#fff" : "#c03040";
+    if (window.HOT_ART) {
+      window.HOT_ART.softCapsule(ctx, -5, -8, 10, 26, dark);
+    } else {
+      ctx.fillStyle = dark;
+      ctx.fillRect(-4, -6, 8, 22);
+    }
+    ctx.fillStyle = lite;
     ctx.beginPath();
     ctx.moveTo(-6, 14);
-    ctx.lineTo(-10, 28);
-    ctx.lineTo(-2, 16);
+    ctx.lineTo(-11, 28);
+    ctx.lineTo(-1, 16);
     ctx.moveTo(0, 16);
     ctx.lineTo(2, 30);
-    ctx.lineTo(4, 16);
+    ctx.lineTo(5, 16);
     ctx.moveTo(6, 14);
     ctx.lineTo(12, 28);
     ctx.lineTo(4, 16);
     ctx.fill();
     if (pose.phase === 1) {
-      ctx.globalAlpha = 0.45 * (1 - pose.p);
-      ctx.strokeStyle = "#ff6080";
-      ctx.lineWidth = 4;
+      ctx.globalAlpha = 0.4 * (1 - pose.p);
+      ctx.strokeStyle = "#ff7088";
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(0, 8, 28, -1.2, 1.0);
+      ctx.arc(0, 8, 26, -1.1, 0.95);
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
     ctx.restore();
 
-    // body
-    ctx.fillStyle = flash ? "#fff" : "#8b2040";
-    roundRect(lx - 18, by - 12, 36, 32, 6);
+    // body soft
+    if (window.HOT_ART && !flash) {
+      const g = ctx.createLinearGradient(lx - 18, by - 14, lx + 18, by + 20);
+      g.addColorStop(0, lite);
+      g.addColorStop(1, dark);
+      ctx.fillStyle = g;
+    } else {
+      ctx.fillStyle = bossCol;
+    }
+    roundRect(lx - 18, by - 12, 36, 32, 8);
     ctx.fill();
-    ctx.fillStyle = flash ? "#fff" : "#c04050";
-    roundRect(lx - 12, by - 6, 24, 12, 3);
-    ctx.fill();
-    ctx.strokeStyle = "#d4a84b";
+    ctx.strokeStyle = "rgba(8,6,12,0.5)";
     ctx.lineWidth = 1.5;
-    ctx.strokeRect(lx - 16, by - 8, 32, 8);
+    roundRect(lx - 18, by - 12, 36, 32, 8);
+    ctx.stroke();
 
-    ctx.fillStyle = flash ? "#fff" : "#a02840";
-    ctx.beginPath();
-    ctx.arc(lx, by - 22, 14, 0, Math.PI * 2);
+    ctx.fillStyle = flash ? "#fff" : lite;
+    roundRect(lx - 12, by - 6, 24, 12, 4);
     ctx.fill();
+    ctx.strokeStyle = gold;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(lx - 14, by - 7, 28, 8);
+
+    // head
+    if (window.HOT_ART && !flash) {
+      window.HOT_ART.softDisc(ctx, lx, by - 22, 14, bossCol, lite);
+    } else {
+      ctx.fillStyle = bossCol;
+      ctx.beginPath();
+      ctx.arc(lx, by - 22, 14, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.fillStyle = flash ? "#fff" : "#3a0810";
     ctx.beginPath();
     ctx.moveTo(lx - 10, by - 30);
@@ -8341,20 +8392,19 @@
   }
 
   function drawEliteAura(x, y, r) {
-    ctx.globalAlpha = 0.4 + Math.sin(elapsed * 6) * 0.15;
-    ctx.strokeStyle = "#ffd070";
-    ctx.lineWidth = 2.5;
+    const gold = (window.HOT_ART && window.HOT_ART.TOKENS.gold) || "#ffd070";
+    ctx.globalAlpha = 0.35 + Math.sin(elapsed * 5) * 0.12;
+    ctx.strokeStyle = gold;
+    ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(x, y, r + 6, 0, Math.PI * 2);
     ctx.stroke();
-    // sparkles
     for (let i = 0; i < 4; i++) {
-      const a = elapsed * 3 + (i * Math.PI) / 2;
-      const sx = x + Math.cos(a) * (r + 8);
-      const sy = y + Math.sin(a) * (r + 8);
-      ctx.fillStyle = "#ffe8a0";
+      const a = elapsed * 2.5 + (i * Math.PI) / 2;
+      ctx.fillStyle = gold;
+      ctx.globalAlpha = 0.5;
       ctx.beginPath();
-      ctx.arc(sx, sy, 2, 0, Math.PI * 2);
+      ctx.arc(x + Math.cos(a) * (r + 8), y + Math.sin(a) * (r + 8), 1.8, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
@@ -8365,17 +8415,22 @@
     const y = e.y - camera.y;
     if (x < -70 || y < -70 || x > W + 70 || y > H + 70) return;
 
-    const facing = player.x >= e.x ? 1 : -1;
+    // Facing hysteresis — tránh lật liên tục khi đứng gần cùng trục X
+    const fdx = player.x - e.x;
+    if (e.facing == null) e.facing = fdx >= 0 ? 1 : -1;
+    if (Math.abs(fdx) > 12) e.facing = fdx > 0 ? 1 : -1;
+    const facing = e.facing;
 
     if (e.isBoss) {
       drawBossSprite(x, y, e);
+      drawStatusAuras(e, x, y);
       return;
     }
 
     if (e.isChampion) {
-      ctx.globalAlpha = 0.45 + Math.sin(elapsed * 7) * 0.15;
+      ctx.globalAlpha = 0.4 + Math.sin(elapsed * 5) * 0.12;
       ctx.strokeStyle = "#ffe060";
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.arc(x, y, e.r + 8, 0, Math.PI * 2);
       ctx.stroke();
@@ -8384,14 +8439,15 @@
 
     const spr = e.sprite || (ENEMY_BASE[e.type] && ENEMY_BASE[e.type].sprite) || "imp";
     drawTypedEnemy(x, y, e, facing, spr);
+    drawStatusAuras(e, x, y);
 
     if (e.isChampion) {
       ctx.font = "bold 9px Segoe UI";
       ctx.textAlign = "center";
       ctx.fillStyle = "rgba(0,0,0,0.55)";
-      ctx.fillText("CHAMPION", x + 1, y - e.r - 14);
+      ctx.fillText("TINH ANH", x + 1, y - e.r - 14);
       ctx.fillStyle = "#ffe060";
-      ctx.fillText("CHAMPION", x, y - e.r - 15);
+      ctx.fillText("TINH ANH", x, y - e.r - 15);
       drawHpBar(x, y - e.r - 8, e.r * 2.4, 4, e.hp / e.maxHp, "#e0c040");
     } else if (e.isMiniboss) {
       ctx.font = "bold 9px Segoe UI";
@@ -8414,6 +8470,43 @@
     }
   }
 
+  /** Status rings — màu theo design tokens */
+  function drawStatusAuras(e, x, y) {
+    if (!e || !e.st) return;
+    const st = e.st;
+    const baseR = (e.r || 14) + 4;
+    let ring = 0;
+    const fx = (window.HOT_ART && window.HOT_ART.TOKENS && window.HOT_ART.TOKENS.element) || {
+      fire: "#e06030", lightning: "#60a0ff", ice: "#80c0e8", earth: "#70a050",
+    };
+    function ringStroke(color, phase) {
+      const rr = baseR + ring * 3.5;
+      ring++;
+      ctx.globalAlpha = 0.35 + Math.sin(elapsed * 6 + phase) * 0.12;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, rr, 0, Math.PI * 2);
+      ctx.stroke();
+      // soft particles
+      for (let i = 0; i < 3; i++) {
+        const a = elapsed * 3 + phase + (i * Math.PI * 2) / 3;
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.45;
+        ctx.beginPath();
+        ctx.arc(x + Math.cos(a) * rr, y + Math.sin(a) * rr, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (st.burn > 0) ringStroke(fx.fire || "#e06030", 0);
+    if (st.electrify > 0 || st.electrifyT > 0) ringStroke(fx.lightning || "#60a0ff", 1.2);
+    if (st.slow > 0 || e.frostSlow > 0) ringStroke(fx.ice || "#80c0e8", 2.1);
+    if (st.decay > 0) ringStroke(fx.earth || "#70a050", 3.0);
+    if (st.fragile > 0) ringStroke("#c080e0", 4.0);
+    if (st.mark > 0) ringStroke("#d4a84b", 5.0);
+  }
+
   /** Type-specific enemy art from wiki names */
   function drawTypedEnemy(x, y, e, facing, spr) {
     const flash = e.hitFlash > 0;
@@ -8421,12 +8514,20 @@
     const dark = flash ? "#eee" : shadeColor(e.color, -0.35);
     const lite = flash ? "#fff" : shadeColor(e.color, 0.25);
     const pose = enemyAtkPose(e);
-    const bob = pose.phase >= 0 ? 0 : Math.sin(elapsed * 7 + e.x * 0.05) * 1.2;
-    const lean = pose.phase === 0 ? -3 * facing : pose.phase === 1 ? 5 * facing : 0;
-    const by = y + bob;
+    // Sprite path: no bob/lean (gây rung khi di chuyển)
+    const bob = 0;
+    const lean = 0;
+    const by = y;
     const s = Math.max(0.7, e.r / 14);
 
-    drawShadow(x, y + 10 * s, 9 * s, 3.5 * s);
+    // Soft vector enemies (design system)
+    if (window.HOT_ART && typeof window.HOT_ART.drawSoftEnemy === "function") {
+      const kind = spr || "imp";
+      const sc = Math.max(0.65, Math.min(1.45, (e.r || 14) / 15));
+      if (window.HOT_ART.drawSoftEnemy(ctx, kind, e.color, x, by, facing, sc, flash)) {
+        return;
+      }
+    }
 
     if (spr === "slime") {
       ctx.fillStyle = col;
@@ -8898,7 +8999,17 @@
     const y = g.y - camera.y;
     const bob = Math.sin(elapsed * 5 + g.x) * 2;
     const gy = y + bob;
-    // diamond shape
+    if (window.HOT_ART && typeof window.HOT_ART.drawSoftPickup === "function") {
+      ctx.globalAlpha = 0.22;
+      ctx.fillStyle = g.premium ? "#ffd070" : "#7ec850";
+      ctx.beginPath();
+      ctx.arc(x, gy, g.r + 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      window.HOT_ART.drawSoftPickup(ctx, g.premium ? "gold" : "xp", x, gy, 0.9);
+      return;
+    }
+    // fallback diamond
     ctx.save();
     ctx.translate(x, gy);
     ctx.rotate(elapsed * 1.5 + g.x * 0.1);
@@ -8910,22 +9021,7 @@
     ctx.lineTo(-g.r, 0);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = g.premium ? "rgba(255,255,200,0.7)" : "rgba(220,255,180,0.6)";
-    ctx.beginPath();
-    ctx.moveTo(0, -g.r * 0.5);
-    ctx.lineTo(g.r * 0.4, 0);
-    ctx.lineTo(0, g.r * 0.2);
-    ctx.lineTo(-g.r * 0.25, 0);
-    ctx.closePath();
-    ctx.fill();
     ctx.restore();
-    // glow
-    ctx.globalAlpha = 0.25;
-    ctx.fillStyle = g.premium ? "#ffd070" : "#7ec850";
-    ctx.beginPath();
-    ctx.arc(x, gy, g.r + 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
   }
 
   function drawAbilityFxLayer() {
@@ -9213,14 +9309,18 @@
     for (const g of goldCoins) {
       const x = g.x - camera.x;
       const y = g.y - camera.y;
-      ctx.fillStyle = "#d4a84b";
-      ctx.beginPath();
-      ctx.arc(x, y, g.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#fff0a0";
-      ctx.beginPath();
-      ctx.arc(x - 1, y - 1, g.r * 0.4, 0, Math.PI * 2);
-      ctx.fill();
+      if (window.HOT_ART && typeof window.HOT_ART.drawSoftPickup === "function") {
+        window.HOT_ART.drawSoftPickup(ctx, "gold", x, y, 0.8);
+      } else {
+        ctx.fillStyle = "#d4a84b";
+        ctx.beginPath();
+        ctx.arc(x, y, g.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff0a0";
+        ctx.beginPath();
+        ctx.arc(x - 1, y - 1, g.r * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     // Chests
@@ -9291,15 +9391,19 @@
       ctx.beginPath();
       ctx.arc(x, y, 18, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = t.upgradeMode ? "#3a2810" : "#1a2848";
-      ctx.fillRect(x - 8, y - 10, 16, 20);
-      ctx.strokeStyle = t.upgradeMode ? "#d4a84b" : "#8ab4ff";
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(x - 8, y - 10, 16, 20);
-      ctx.fillStyle = "#d4a84b";
-      ctx.font = "bold 10px Segoe UI";
-      ctx.textAlign = "center";
-      ctx.fillText(t.upgradeMode ? "U" : "T", x, y + 4);
+      if (window.HOT_ART && typeof window.HOT_ART.drawSoftPickup === "function") {
+        window.HOT_ART.drawSoftPickup(ctx, "tome", x, y, 1.05);
+      } else {
+        ctx.fillStyle = t.upgradeMode ? "#3a2810" : "#1a2848";
+        ctx.fillRect(x - 8, y - 10, 16, 20);
+        ctx.strokeStyle = t.upgradeMode ? "#d4a84b" : "#8ab4ff";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x - 8, y - 10, 16, 20);
+        ctx.fillStyle = "#d4a84b";
+        ctx.font = "bold 10px Segoe UI";
+        ctx.textAlign = "center";
+        ctx.fillText(t.upgradeMode ? "U" : "T", x, y + 4);
+      }
     }
 
     // Ability orbits (distinct shapes)
@@ -9452,25 +9556,38 @@
         ctx.fill();
       } else {
         const ang = Math.atan2(p.vy, p.vx);
+        // soft glow trail
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = p.color || "#d4a84b";
+        ctx.beginPath();
+        ctx.arc(x, y, (p.r || 4) * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(ang);
-        // shaft
-        ctx.fillStyle = "#8b5a2b";
-        ctx.fillRect(-10, -1.5, 14, 3);
-        // fletching
-        ctx.fillStyle = p.color;
+        // soft capsule body
+        const pc = p.color || "#d4a84b";
+        if (window.HOT_ART) {
+          const g = ctx.createLinearGradient(-10, 0, 12, 0);
+          g.addColorStop(0, window.HOT_ART.shade(pc, -0.15));
+          g.addColorStop(0.5, pc);
+          g.addColorStop(1, "#f0f0f0");
+          ctx.fillStyle = g;
+        } else {
+          ctx.fillStyle = pc;
+        }
         ctx.beginPath();
-        ctx.moveTo(-10, 0);
-        ctx.lineTo(-14, -4);
-        ctx.lineTo(-8, 0);
-        ctx.lineTo(-14, 4);
-        ctx.closePath();
+        ctx.ellipse(0, 0, 9, Math.max(2.5, (p.r || 4) * 0.7), 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.45)";
+        ctx.beginPath();
+        ctx.ellipse(-2, -1, 4, 1.2, 0, 0, Math.PI * 2);
         ctx.fill();
         // tip
         ctx.fillStyle = "#e8e8e8";
         ctx.beginPath();
-        ctx.moveTo(4, 0);
+        ctx.moveTo(6, 0);
         ctx.lineTo(12, -3);
         ctx.lineTo(12, 3);
         ctx.closePath();
@@ -9481,32 +9598,26 @@
 
     if (slashFx) {
       const alpha = slashFx.life / slashFx.maxLife;
-      ctx.strokeStyle = slashFx.color;
-      ctx.globalAlpha = alpha * 0.7;
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(slashFx.x - camera.x, slashFx.y - camera.y, slashFx.r * (1.1 - alpha * 0.2), 0, Math.PI * 2);
-      ctx.stroke();
-      // slash arcs
-      ctx.lineWidth = 2;
-      for (let i = 0; i < 3; i++) {
-        const a0 = elapsed * 10 + i;
+      const sx = slashFx.x - camera.x;
+      const sy = slashFx.y - camera.y;
+      const aim = slashFx.aim != null ? slashFx.aim : (player && player.facing > 0 ? 0 : Math.PI);
+      if (window.HOT_ART && window.HOT_ART.softSlash) {
+        window.HOT_ART.softSlash(ctx, sx, sy, aim, slashFx.r * (1.05 - alpha * 0.15), slashFx.color, alpha * 0.75);
+        ctx.globalAlpha = alpha * 0.1;
+        ctx.fillStyle = slashFx.color;
         ctx.beginPath();
-        ctx.arc(
-          slashFx.x - camera.x,
-          slashFx.y - camera.y,
-          slashFx.r * (0.6 + i * 0.15),
-          a0,
-          a0 + 1.2
-        );
+        ctx.arc(sx, sy, slashFx.r * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.strokeStyle = slashFx.color;
+        ctx.globalAlpha = alpha * 0.7;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(sx, sy, slashFx.r * (1.1 - alpha * 0.2), 0, Math.PI * 2);
         ctx.stroke();
+        ctx.globalAlpha = 1;
       }
-      ctx.globalAlpha = alpha * 0.12;
-      ctx.fillStyle = slashFx.color;
-      ctx.beginPath();
-      ctx.arc(slashFx.x - camera.x, slashFx.y - camera.y, slashFx.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
     }
 
     // player (on top of most enemies if y allows - draw after sorted that are behind)
@@ -9640,7 +9751,6 @@
   let detailFocus = "hero"; // which selection last clicked — drives detail text
 
   function paintPortrait(canvas, heroId, size) {
-    if (!canvas || typeof window.drawHeroPortrait !== "function") return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const s = size || 72;
     canvas.width = Math.round(s * dpr);
@@ -9649,7 +9759,10 @@
     canvas.style.height = s + "px";
     const c2d = canvas.getContext("2d");
     c2d.setTransform(dpr, 0, 0, dpr, 0, 0);
-    window.drawHeroPortrait(c2d, heroId, s, s);
+    // Soft vector portrait (design system)
+    if (typeof window.drawHeroPortrait === "function") {
+      window.drawHeroPortrait(c2d, heroId, s, s);
+    }
   }
 
   function paintHallArt(canvas, hallId, w, h) {
@@ -9667,10 +9780,10 @@
   }
 
   function startBlockReason() {
-    if (!pendingHeroId) return "Cần chọn Hero (strip hoặc tab Hero)";
-    if (pendingMode !== "torment" && !pendingHallId) return "Cần chọn Hall";
+    if (!pendingHeroId) return "Cần chọn Anh hùng (dải nhanh hoặc tab Anh hùng)";
+    if (pendingMode !== "torment" && !pendingHallId) return "Cần chọn Sảnh";
     if (pendingMode === "torment" && !isTormentLevelUnlocked(pendingTormentLevel || 1)) {
-      return "Torment level đang khóa";
+      return "Cấp Khổ hình đang khóa";
     }
     return "";
   }
@@ -9689,8 +9802,8 @@
     if (reasonEl) {
       reasonEl.textContent = canStart
         ? (pendingMode === "torment"
-          ? `Sẵn sàng · Torment Lv ${pendingTormentLevel || 1}`
-          : "Sẵn sàng · Hall run")
+          ? `Sẵn sàng · Khổ hình cấp ${pendingTormentLevel || 1}`
+          : "Sẵn sàng · màn Sảnh")
         : reason;
       reasonEl.classList.toggle("ok", canStart);
     }
@@ -9700,35 +9813,35 @@
     const pmark = document.getElementById("pick-mark-label");
     if (ph) {
       const hn = pendingHeroId && CLASSES[pendingHeroId] ? CLASSES[pendingHeroId].name : "—";
-      ph.innerHTML = `Hero: <strong>${hn}</strong>`;
+      ph.innerHTML = `Anh hùng: <strong>${hn}</strong>`;
     }
     if (pl) {
       if (pendingMode === "torment") {
-        pl.innerHTML = `Hall: <strong>Random</strong>`;
+        pl.innerHTML = `Sảnh: <strong>Ngẫu nhiên</strong>`;
       } else {
         const hl = pendingHallId && HALLS[pendingHallId] ? HALLS[pendingHallId].name : "—";
-        pl.innerHTML = `Hall: <strong>${hl}</strong>`;
+        pl.innerHTML = `Sảnh: <strong>${hl}</strong>`;
       }
     }
     if (pm) {
-      pm.innerHTML = `Mode: <strong>${pendingMode === "torment" ? "Torment" : "Hall"}</strong>`;
+      pm.innerHTML = `Chế độ: <strong>${pendingMode === "torment" ? "Khổ hình" : "Sảnh"}</strong>`;
     }
     if (pmark) {
       const mid = meta.activeMark;
       const mn = mid && MARKS[mid] ? MARKS[mid].name : "—";
-      pmark.innerHTML = `Mark: <strong style="color:${mid && MARKS[mid] ? (MARKS[mid].color || "#c080e0") : "inherit"}">${mn}</strong>`;
+      pmark.innerHTML = `Dấu ấn: <strong style="color:${mid && MARKS[mid] ? (MARKS[mid].color || "#c080e0") : "inherit"}">${mn}</strong>`;
     }
     // Run sidebar meta pills
     const pills = document.getElementById("run-meta-pills");
     if (pills) {
       const bits = [];
       const loadN = (meta.loadout || []).length;
-      bits.push(`<span class="meta-pill loadout">Loadout ${loadN}/${MAX_LOADOUT}</span>`);
+      bits.push(`<span class="meta-pill loadout">Trang bị ${loadN}/${MAX_LOADOUT}</span>`);
       if (meta.activeMark && MARKS[meta.activeMark]) {
-        bits.push(`<span class="meta-pill mark">${MARKS[meta.activeMark].name.replace("Mark of ", "")}</span>`);
+        bits.push(`<span class="meta-pill mark">${MARKS[meta.activeMark].name.replace(/^Dấu ấn\s+/i, "")}</span>`);
       }
       if (pendingMode === "torment" && pendingArtifacts.length) {
-        bits.push(`<span class="meta-pill art">${pendingArtifacts.length} Artifacts</span>`);
+        bits.push(`<span class="meta-pill art">${pendingArtifacts.length} tạo tác</span>`);
       }
       pills.innerHTML = bits.join("");
     }
@@ -9763,7 +9876,7 @@
       const tp = document.createElement("span");
       tp.className = "rh-type";
       tp.style.color = dt.color;
-      tp.textContent = dt.short || dt.label.slice(0, 3).toUpperCase();
+      tp.textContent = dt.label || "";
       btn.appendChild(cv);
       btn.appendChild(nm);
       btn.appendChild(tp);
@@ -9853,26 +9966,27 @@
     }
     const b = prev.base;
     const f = prev.full;
+    const VS = (window.HOT_VI && window.HOT_VI.stats) || {};
     const specs = [
-      { key: "maxHp", name: "HP", kind: "int" },
-      { key: "damage", name: "ATK", kind: "num" },
-      { key: "asp", name: "ASP /s", kind: "asp" },
-      { key: "speed", name: "SPD", kind: "int" },
-      { key: "range", name: "RNG", kind: "int" },
-      { key: "defense", name: "DEF", kind: "int" },
-      { key: "block", name: "BLK", kind: "int" },
-      { key: "regen", name: "REGEN", kind: "regen" },
-      { key: "crit", name: "CRIT %", kind: "pct" },
-      { key: "critB", name: "C.DMG %", kind: "pct" },
-      { key: "multi", name: "MULTI", kind: "multi" },
-      { key: "force", name: "FORCE", kind: "force" },
-      { key: "pickup", name: "PICKUP", kind: "int" },
-      { key: "abDmg", name: "AB DMG %", kind: "pct" },
-      { key: "abCd", name: "AB CD %", kind: "lower" },
-      { key: "xpGain", name: "XP %", kind: "pct" },
-      { key: "goldFind", name: "GOLD %", kind: "pct" },
-      { key: "effect", name: "EFFECT %", kind: "pct" },
-      { key: "thorns", name: "THORNS", kind: "int" },
+      { key: "maxHp", name: VS.maxHp || "Máu tối đa", kind: "int" },
+      { key: "damage", name: VS.damage || "Sát thương", kind: "num" },
+      { key: "asp", name: VS.asp || "Tốc độ đánh (lần/giây)", kind: "asp" },
+      { key: "speed", name: VS.speed || "Tốc độ di chuyển", kind: "int" },
+      { key: "range", name: VS.range || "Tầm đánh", kind: "int" },
+      { key: "defense", name: VS.defense || "Phòng thủ", kind: "int" },
+      { key: "block", name: VS.block || "Sức chắn", kind: "int" },
+      { key: "regen", name: VS.regen || "Hồi máu (mỗi giây)", kind: "regen" },
+      { key: "crit", name: VS.crit || "Tỷ lệ chí mạng (%)", kind: "pct" },
+      { key: "critB", name: VS.critB || "Sát thương chí mạng (%)", kind: "pct" },
+      { key: "multi", name: VS.multi || "Đa đòn", kind: "multi" },
+      { key: "force", name: VS.force || "Lực đẩy", kind: "force" },
+      { key: "pickup", name: VS.pickup || "Tầm nhặt đồ", kind: "int" },
+      { key: "abDmg", name: VS.abDmg || "Sát thương khả năng (%)", kind: "pct" },
+      { key: "abCd", name: VS.abCd || "Hồi chiêu khả năng (%)", kind: "lower" },
+      { key: "xpGain", name: VS.xpGain || "Nhận kinh nghiệm (%)", kind: "pct" },
+      { key: "goldFind", name: VS.goldFind || "Tìm vàng (%)", kind: "pct" },
+      { key: "effect", name: VS.effect || "Tỷ lệ hiệu ứng (%)", kind: "pct" },
+      { key: "thorns", name: VS.thorns || "Gai phản", kind: "int" },
     ];
     rows.innerHTML = specs.map((sp) => {
       const bv = b[sp.key];

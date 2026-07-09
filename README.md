@@ -39,7 +39,8 @@ All scripts are local — no build step, no server required (file:// works for t
 | `data.js` | Heroes, items, marks, artifacts, halls… |
 | `game.js` | Runtime · combat · meta |
 | `sfx.js` | Procedural audio |
-| `ability-icons.js` · `menu-portraits.js` · `hall-art.js` | Canvas icons / art |
+| `art.js` | **Vector soft design system** — tokens, icon plates, soft enemy/pickup |
+| `ability-icons.js` · `menu-portraits.js` · `hall-art.js` | Icons / portraits / hall art (dùng plate từ art.js) |
 
 ## Meta save
 

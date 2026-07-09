@@ -5,26 +5,27 @@
 window.drawAbilityIcon = function drawAbilityIcon(ctx, abilityId, w, h, color) {
   const id = abilityId || "phantom_needles";
   const c = color || "#8ab4ff";
-  const cx = w / 2;
-  const cy = h / 2;
-  const s = Math.min(w, h) / 48;
-
-  ctx.clearRect(0, 0, w, h);
-
-  // rounded plate background
-  const pad = 2;
-  ctx.fillStyle = "#12101a";
-  roundRectPath(ctx, pad, pad, w - pad * 2, h - pad * 2, 8);
-  ctx.fill();
-  const grad = ctx.createRadialGradient(cx, cy * 0.7, 2, cx, cy, w * 0.55);
-  grad.addColorStop(0, hexA(c, 0.28));
-  grad.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, w, h);
-  ctx.strokeStyle = hexA(c, 0.55);
-  ctx.lineWidth = 1.5;
-  roundRectPath(ctx, pad + 0.5, pad + 0.5, w - pad * 2 - 1, h - pad * 2 - 1, 7);
-  ctx.stroke();
+  // Design system: circular plate for abilities
+  let cx = w / 2, cy = h / 2, s = Math.min(w, h) / 48;
+  if (window.HOT_ART && typeof window.HOT_ART.plateCircle === "function") {
+    const p = window.HOT_ART.plateCircle(ctx, w, h, c);
+    cx = p.cx; cy = p.cy; s = p.s;
+  } else {
+    ctx.clearRect(0, 0, w, h);
+    const pad = 2;
+    ctx.fillStyle = "#12101a";
+    roundRectPath(ctx, pad, pad, w - pad * 2, h - pad * 2, 8);
+    ctx.fill();
+    const grad = ctx.createRadialGradient(cx, cy * 0.7, 2, cx, cy, w * 0.55);
+    grad.addColorStop(0, hexA(c, 0.28));
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = hexA(c, 0.55);
+    ctx.lineWidth = 1.5;
+    roundRectPath(ctx, pad + 0.5, pad + 0.5, w - pad * 2 - 1, h - pad * 2 - 1, 7);
+    ctx.stroke();
+  }
 
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
@@ -544,24 +545,29 @@ window.paintAbilityIcon = function paintAbilityIcon(canvas, abilityId, color, si
 window.drawTraitIcon = function drawTraitIcon(ctx, traitId, w, h, color, cat) {
   const id = traitId || "vitality";
   const c = color || traitColor(id, cat);
-  const cx = w / 2;
-  const cy = h / 2;
-  const s = Math.min(w, h) / 48;
+  let cx = w / 2;
+  let cy = h / 2;
+  let s = Math.min(w, h) / 48;
 
-  ctx.clearRect(0, 0, w, h);
-  const pad = 2;
-  ctx.fillStyle = "#12101a";
-  roundRectPath(ctx, pad, pad, w - pad * 2, h - pad * 2, 8);
-  ctx.fill();
-  const grad = ctx.createRadialGradient(cx, cy * 0.7, 2, cx, cy, w * 0.55);
-  grad.addColorStop(0, hexA(c, 0.3));
-  grad.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, w, h);
-  ctx.strokeStyle = hexA(c, 0.55);
-  ctx.lineWidth = 1.5;
-  roundRectPath(ctx, pad + 0.5, pad + 0.5, w - pad * 2 - 1, h - pad * 2 - 1, 7);
-  ctx.stroke();
+  if (window.HOT_ART && typeof window.HOT_ART.plateSquare === "function") {
+    const p = window.HOT_ART.plateSquare(ctx, w, h, c);
+    cx = p.cx; cy = p.cy; s = p.s;
+  } else {
+    ctx.clearRect(0, 0, w, h);
+    const pad = 2;
+    ctx.fillStyle = "#12101a";
+    roundRectPath(ctx, pad, pad, w - pad * 2, h - pad * 2, 8);
+    ctx.fill();
+    const grad = ctx.createRadialGradient(cx, cy * 0.7, 2, cx, cy, w * 0.55);
+    grad.addColorStop(0, hexA(c, 0.3));
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = hexA(c, 0.55);
+    ctx.lineWidth = 1.5;
+    roundRectPath(ctx, pad + 0.5, pad + 0.5, w - pad * 2 - 1, h - pad * 2 - 1, 7);
+    ctx.stroke();
+  }
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   ctx.fillStyle = c;
@@ -954,18 +960,23 @@ window.paintTraitIcon = function paintTraitIcon(canvas, traitId, color, size, ca
 /** Item slot icon for chest pick */
 window.drawItemSlotIcon = function drawItemSlotIcon(ctx, slot, w, h, color) {
   const c = color || "#d4a84b";
-  const cx = w / 2;
-  const cy = h / 2;
-  const s = Math.min(w, h) / 48;
-  ctx.clearRect(0, 0, w, h);
-  const pad = 2;
-  ctx.fillStyle = "#12101a";
-  roundRectPath(ctx, pad, pad, w - pad * 2, h - pad * 2, 8);
-  ctx.fill();
-  ctx.strokeStyle = hexA(c, 0.55);
-  ctx.lineWidth = 1.5;
-  roundRectPath(ctx, pad + 0.5, pad + 0.5, w - pad * 2 - 1, h - pad * 2 - 1, 7);
-  ctx.stroke();
+  let cx = w / 2;
+  let cy = h / 2;
+  let s = Math.min(w, h) / 48;
+  if (window.HOT_ART && typeof window.HOT_ART.plateSquare === "function") {
+    const p = window.HOT_ART.plateSquare(ctx, w, h, c);
+    cx = p.cx; cy = p.cy; s = p.s;
+  } else {
+    ctx.clearRect(0, 0, w, h);
+    const pad = 2;
+    ctx.fillStyle = "#12101a";
+    roundRectPath(ctx, pad, pad, w - pad * 2, h - pad * 2, 8);
+    ctx.fill();
+    ctx.strokeStyle = hexA(c, 0.55);
+    ctx.lineWidth = 1.5;
+    roundRectPath(ctx, pad + 0.5, pad + 0.5, w - pad * 2 - 1, h - pad * 2 - 1, 7);
+    ctx.stroke();
+  }
   ctx.fillStyle = c;
   ctx.strokeStyle = c;
   ctx.lineWidth = 2.2 * s;
