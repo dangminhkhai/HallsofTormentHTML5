@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Halls of Torment — Prototype</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Character + Hall select — one screen, two zones -->
+    <div id="menu" class="screen menu-screen">
+      <div class="menu-shell">
+        <header class="menu-top">
+          <h1>HALLS OF TORMENT</h1>
+          <p class="subtitle">Hall mode · Torment ladder · Camp · full unlock</p>
+          <div class="meta-bar">
+            <span id="meta-gold">Gold: 0</span>
+            <span class="meta-sep">·</span>
+            <span id="meta-shards">Shards: 0</span>
+          </div>
+          <nav class="menu-tabs" aria-label="Menu tabs">
+            <button type="button" class="menu-tab selected" data-tab="run" id="tab-btn-run">Run</button>
+            <button type="button" class="menu-tab" data-tab="hero" id="tab-btn-hero">Hero · Stats</button>
+            <button type="button" class="menu-tab" data-tab="camp" id="tab-btn-camp">Camp · Blessings · Well</button>
+          </nav>
+        </header>
+
+        <!-- Tab: Run (mode / hall / difficulty) -->
+        <div id="tab-run" class="menu-tab-panel">
+          <div class="menu-body">
+            <div class="menu-main">
+              <section class="zone zone-mode" aria-label="Chế độ chơi">
+                <div class="roster-label">Chế độ · Hall / Torment</div>
+                <div class="mode-picks" id="mode-picks">
+                  <button type="button" class="mode-btn selected" data-mode="hall" id="mode-btn-hall">
+                    <strong>Hall</strong>
+                    <span>Chọn màn · 5/10/15p · Agony tùy chọn</span>
+                  </button>
+                  <button type="button" class="mode-btn" data-mode="torment" id="mode-btn-torment">
+                    <strong>Torment</strong>
+                    <span>Lv khóa · clear mở tiếp · 5/10/15p · hall random</span>
+                  </button>
+                </div>
+              </section>
+
+              <section class="zone zone-run-hero" aria-label="Hero nhanh">
+                <div class="roster-label row-between">
+                  <span>Hero · chọn nhanh</span>
+                  <button type="button" class="link-btn" id="btn-run-to-hero">Stats chi tiết →</button>
+                </div>
+                <div id="run-hero-strip" class="run-hero-strip"></div>
+              </section>
+
+              <section class="zone zone-halls" id="zone-halls" aria-label="Chọn màn chơi">
+                <div class="roster-label">Màn chơi · Halls</div>
+                <div id="hall-grid" class="hall-grid"></div>
+              </section>
+
+              <section class="zone zone-diff" aria-label="Độ khó">
+                <div class="roster-label" id="diff-zone-label">Run · Hall options</div>
+                <div class="diff-row">
+                  <div class="diff-block">
+                    <span class="diff-title">Thời gian</span>
+                    <div id="duration-picks" class="duration-picks"></div>
+                  </div>
+                  <div class="diff-block" id="agony-block">
+                    <span class="diff-title">Agony (Hall)</span>
+                    <label class="chk-agony" id="agony-label">
+                      <input type="checkbox" id="chk-agony" />
+                      <span id="agony-label-text">Agony Mode (Hard)</span>
+                    </label>
+                    <p id="agony-hint" class="diff-hint">Chỉ Hall · meter Rank 1–5 · Champions</p>
+                  </div>
+                  <div class="diff-block hidden" id="torment-level-block">
+                    <span class="diff-title">Torment Level <em id="torment-level-label">Lv 1</em></span>
+                    <div id="torment-level-picks" class="torment-level-picks"></div>
+                    <p class="diff-hint" id="torment-level-hint">Mỗi level quái mạnh hơn · hall random khi bắt đầu</p>
+                  </div>
+                </div>
+                <div class="diff-block artifacts-block hidden" id="artifacts-block">
+                  <button type="button" class="art-collapse-btn" id="btn-art-collapse" aria-expanded="false" title="Thu gọn / mở Artifacts">
+                    <span class="art-collapse-chevron" id="art-collapse-chevron">▸</span>
+                    <span class="diff-title">Torment Artifacts <em id="torment-rank-label">0 chọn</em></span>
+                    <span class="art-collapse-summary" id="art-collapse-summary">tùy chọn · full mở</span>
+                  </button>
+                  <div id="artifact-panel" class="artifact-panel collapsed">
+                    <p class="diff-hint" style="margin:6px 0 4px">Tất cả mở · cộng thêm debuff/scale lên Torment Level · không khóa</p>
+                    <div class="art-tools" id="art-tools">
+                      <input type="search" id="art-search" class="art-search" placeholder="Tìm artifact…" autocomplete="off" />
+                      <div class="art-presets" id="art-presets">
+                        <button type="button" class="art-preset" data-preset="none">None</button>
+                        <button type="button" class="art-preset" data-preset="light">Light</button>
+                        <button type="button" class="art-preset" data-preset="pain">Pain</button>
+                        <button type="button" class="art-preset" data-preset="chaos">Chaos</button>
+                      </div>
+                    </div>
+                    <div id="artifact-grid" class="artifact-grid"></div>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <aside id="select-detail" class="hero-detail run-detail">
+              <div class="detail-previews">
+                <canvas id="detail-portrait" class="detail-portrait" width="100" height="100" title="Hero"></canvas>
+                <canvas id="detail-hall-art" class="detail-hall-art" width="140" height="88" title="Hall"></canvas>
+              </div>
+              <h2 id="detail-name">Chọn Hero &amp; Hall</h2>
+              <p id="detail-weapon" class="detail-weapon">—</p>
+              <ul id="detail-blurb" class="detail-blurb"></ul>
+              <div class="run-meta-pills" id="run-meta-pills"></div>
+              <div class="run-hero-summary" id="run-hero-summary">
+                <p class="diff-hint">Chọn hero trên strip hoặc tab <strong>Hero · Stats</strong>.</p>
+                <button type="button" class="camp-btn" id="btn-goto-hero">Stats chi tiết</button>
+              </div>
+              <div class="detail-picks">
+                <span id="pick-mode-label">Mode: Hall</span>
+                <span id="pick-hero-label">Hero: —</span>
+                <span id="pick-hall-label">Hall: —</span>
+                <span id="pick-diff-label">Run: 5 phút · Normal</span>
+                <span id="pick-loadout-label">Loadout: 0 item</span>
+                <span id="pick-mark-label">Mark: —</span>
+              </div>
+              <div class="start-block">
+                <p id="start-reason" class="start-reason" aria-live="polite"></p>
+                <button id="btn-start" type="button" class="btn-start" disabled>Bắt đầu</button>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <!-- Tab: Hero (roster + full stats) -->
+        <div id="tab-hero" class="menu-tab-panel hidden">
+          <div class="hero-tab-body">
+            <div class="hero-tab-main">
+              <header class="hero-tab-intro">
+                <div class="roster-label">Hero roster · wiki damage types</div>
+                <p class="camp-hint">PHY · MAG · ELE · OTH · so sánh <strong>Base</strong> vs <strong>+ Đồ / Blessings / Mark</strong></p>
+              </header>
+              <section class="zone zone-heroes hero-tab-roster" aria-label="Chọn hero">
+                <div class="roster-label hero-dmg-label phy" data-dmg="physical">Physical · PHY</div>
+                <div id="class-grid-physical" class="class-grid" data-dmg="physical"></div>
+                <div class="roster-label hero-dmg-label mag" data-dmg="magic">Magic · MAG</div>
+                <div id="class-grid-magic" class="class-grid" data-dmg="magic"></div>
+                <div class="roster-label hero-dmg-label ele" data-dmg="elemental">Elemental · ELE <span class="roster-sub">(Fire · Lightning · Ice · Earth)</span></div>
+                <div id="class-grid-elemental" class="class-grid" data-dmg="elemental"></div>
+                <div class="roster-label hero-dmg-label oth" data-dmg="other">Other · OTH</div>
+                <div id="class-grid-other" class="class-grid" data-dmg="other"></div>
+              </section>
+            </div>
+
+            <aside class="hero-detail hero-tab-detail" id="hero-detail-panel">
+              <div class="detail-previews hero-tab-previews">
+                <canvas id="hero-tab-portrait" class="detail-portrait hero-tab-portrait" width="120" height="120" title="Hero"></canvas>
+              </div>
+              <h2 id="hero-tab-name">Chọn Hero</h2>
+              <p id="hero-tab-weapon" class="detail-weapon">—</p>
+              <p id="hero-tab-dmg" class="hero-tab-dmg">—</p>
+              <ul id="hero-tab-blurb" class="detail-blurb hero-tab-blurb"></ul>
+              <div id="hero-stat-panel" class="hero-stat-panel hero-stat-panel-lg hidden">
+                <div class="hero-stat-head hero-stat-head-lg">
+                  <span>Chỉ số</span>
+                  <span class="col-base">Base</span>
+                  <span class="col-final">+Đồ / Bless</span>
+                  <span class="col-pad"></span>
+                  <span class="col-base">Base</span>
+                  <span class="col-final">+Đồ / Bless</span>
+                </div>
+                <div id="hero-stat-rows" class="hero-stat-rows"></div>
+                <p id="hero-stat-meta" class="hero-stat-meta"></p>
+              </div>
+              <div class="hero-tab-actions">
+                <button type="button" class="btn-start" id="btn-hero-to-run">Chọn &amp; về Run</button>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <!-- Tab: Camp (sub-tabs) -->
+        <div id="tab-camp" class="menu-tab-panel hidden">
+          <nav class="camp-subtabs" aria-label="Camp sections">
+            <button type="button" class="camp-subtab selected" data-camp="blessings">Blessings</button>
+            <button type="button" class="camp-subtab" data-camp="well">Well</button>
+            <button type="button" class="camp-subtab" data-camp="marks">Marks</button>
+            <button type="button" class="camp-subtab" data-camp="shards">Shards</button>
+            <button type="button" class="camp-subtab" data-camp="settings">Settings</button>
+          </nav>
+          <div class="camp-body">
+            <section class="camp-section" data-camp-panel="blessings" aria-label="Blessings">
+              <div class="roster-label">Shrine of Blessings · Gold meta</div>
+              <p class="camp-hint">Mua vĩnh viễn · mọi run · Refund hoàn gold · <em>full mở</em></p>
+              <div class="camp-actions">
+                <button type="button" id="btn-refund-blessings" class="camp-btn secondary">Refund all Blessings</button>
+              </div>
+              <div id="blessing-grid" class="camp-grid blessing-grid"></div>
+            </section>
+
+            <section class="camp-section hidden" data-camp-panel="well" aria-label="Well of Life">
+              <div class="roster-label">Well of Life · Loadout (7 slot wiki)</div>
+              <p class="camp-hint">H/A/R×2/C/B/G · start Common · trong run: chest + Well heal/bán</p>
+              <div class="camp-actions">
+                <button type="button" id="btn-clear-loadout" class="camp-btn secondary">Clear loadout</button>
+                <span id="loadout-count" class="loadout-count">0 / 7</span>
+              </div>
+              <div id="well-grid" class="camp-grid well-grid"></div>
+            </section>
+
+            <section class="camp-section hidden" data-camp-panel="marks" aria-label="Marks">
+              <div class="roster-label">Marks · equip bất kỳ hero</div>
+              <p class="camp-hint">Mua 1 lần · click owned để <strong>equip</strong> · hero trùng mark +synergy</p>
+              <div id="mark-grid" class="camp-grid mark-grid"></div>
+            </section>
+
+            <section class="camp-section hidden" data-camp-panel="shards" aria-label="Shard shop">
+              <div class="roster-label">Torment Shard Shop</div>
+              <p class="camp-hint">Tiêu Shards · bonus vĩnh viễn · <em>không khóa</em></p>
+              <div id="shard-shop-grid" class="camp-grid shard-shop-grid"></div>
+            </section>
+
+            <section class="camp-section hidden" data-camp-panel="settings" aria-label="Settings">
+              <div class="roster-label">Settings · QoL</div>
+              <p class="camp-hint">SFX · shake · gamepad · xóa meta</p>
+              <div class="settings-row">
+                <label class="settings-label">Master Vol <span id="vol-label">55%</span>
+                  <input type="range" id="set-vol" min="0" max="100" value="55" />
+                </label>
+                <label class="chk-set"><input type="checkbox" id="set-sfx" checked /> SFX</label>
+                <label class="chk-set"><input type="checkbox" id="set-shake" checked /> Screen shake</label>
+                <label class="chk-set"><input type="checkbox" id="set-gamepad" checked /> Gamepad</label>
+                <button type="button" id="btn-clear-meta" class="camp-btn secondary">Clear all meta</button>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <footer class="menu-foot">
+          <span>Di chuyển <kbd>WASD</kbd></span>
+          <span>Tạm dừng <kbd>Esc</kbd></span>
+          <span>Run · Hero strip · Camp sub-tabs</span>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Global toast -->
+    <div id="toast-host" class="toast-host" aria-live="polite"></div>
+
+    <!-- Game -->
+    <div id="game-wrap" class="screen hidden">
+      <div id="boss-bar-wrap" class="hidden">
+        <div class="boss-name" id="boss-name">Lord of Torment</div>
+        <div class="boss-bar"><div id="boss-fill"></div></div>
+      </div>
+
+      <!-- Character status panel (top-left) -->
+      <aside id="status-panel" aria-label="Chỉ số nhân vật">
+        <div class="status-header">
+          <span id="st-class">Warrior</span>
+          <span id="st-level">Lv 1</span>
+        </div>
+        <div class="status-row">
+          <span class="st-label">HP</span>
+          <span id="st-hp" class="st-val">100/100</span>
+        </div>
+        <div class="status-row">
+          <span class="st-label">ATK</span>
+          <span id="st-atk" class="st-val">18</span>
+        </div>
+        <div class="status-row">
+          <span class="st-label">ASP</span>
+          <span id="st-asp" class="st-val">1.0/s</span>
+        </div>
+        <div class="status-row">
+          <span class="st-label">SPD</span>
+          <span id="st-spd" class="st-val">145</span>
+        </div>
+        <div class="status-row">
+          <span class="st-label">RNG</span>
+          <span id="st-rng" class="st-val">78</span>
+        </div>
+        <div class="status-row">
+          <span class="st-label">MULTI</span>
+          <span id="st-multi" class="st-val">1</span>
+        </div>
+        <div class="status-row">
+          <span class="st-label">CRIT</span>
+          <span id="st-crit" class="st-val">20%</span>
+        </div>
+        <div class="status-row">
+          <span class="st-label">C.DMG</span>
+          <span id="st-cdmg" class="st-val">+65%</span>
+        </div>
+        <div class="status-row">
+          <span class="st-label">DEF</span>
+          <span id="st-def" class="st-val">0</span>
+        </div>
+        <div class="status-row">
+          <span class="st-label">BLK</span>
+          <span id="st-block" class="st-val">0</span>
+        </div>
+        <div class="status-row">
+          <span class="st-label">FORCE</span>
+          <span id="st-force" class="st-val">1.00</span>
+        </div>
+        <div class="status-row">
+          <span class="st-label">MULTI</span>
+          <span id="st-multi-stat" class="st-val">1.00</span>
+        </div>
+      </aside>
+
+      <!-- Ability stats panel (top-right) -->
+      <aside id="ability-panel" aria-label="Chỉ số Ability">
+        <div class="status-header">
+          <span class="ab-title">ABILITIES</span>
+          <span id="ab-count">0/6</span>
+        </div>
+        <div id="ability-stats-list" class="ability-stats-list">
+          <p class="ab-empty">Chưa có Ability · nhặt Tome (T)</p>
+        </div>
+      </aside>
+
+      <canvas id="game" width="1280" height="720"></canvas>
+
+      <div id="wave-banner" class="hidden">
+        <div id="wave-banner-text">SÓNG 1</div>
+        <div id="wave-banner-sub"></div>
+      </div>
+
+      <div id="hud">
+        <div class="hud-left">
+          <div class="bar-wrap">
+            <span class="bar-label">HP</span>
+            <div class="bar hp-bar"><div id="hp-fill"></div></div>
+            <span id="hp-text">100/100</span>
+          </div>
+          <div class="bar-wrap">
+            <span class="bar-label">XP</span>
+            <div class="bar xp-bar"><div id="xp-fill"></div></div>
+            <span id="lvl-text">Lv 1</span>
+          </div>
+        </div>
+        <div class="hud-center">
+          <span id="wave-text">5:00</span>
+          <span id="diff-text" class="diff-text">Normal</span>
+          <span id="class-name">Warrior</span>
+          <div id="run-pills" class="run-pills" title="Mark · Artifacts"></div>
+        </div>
+        <div class="hud-right">
+          <div id="ability-hud" title="Active Abilities"></div>
+          <div id="item-hud" title="Items" class="item-hud"></div>
+          <div class="hud-meta-row">
+            <span id="gold-text">Gold: 0</span>
+            <span id="shards-hud">Shards: 0</span>
+            <span id="kills">Kills: 0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Level up -->
+    <div id="levelup" class="overlay hidden">
+      <div class="overlay-panel">
+        <h2>LEVEL UP!</h2>
+        <p id="levelup-sub">Trait / Ability Upgrade · <span style="color:#d4a84b">1 cái ×2</span></p>
+        <div id="upgrade-options" class="upgrade-grid"></div>
+        <div class="levelup-actions">
+          <button type="button" id="btn-reroll" class="secondary">Reroll (25G)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ability pick (Tome of Mastery) -->
+    <div id="ability-pick" class="overlay hidden">
+      <div class="overlay-panel ability-panel">
+        <h2>TOME OF MASTERY</h2>
+        <p>Chọn 1 Ability · tối đa 6 · <span style="color:#8ab4ff">wiki HoT</span></p>
+        <div class="type-filter-bar" id="ability-type-filter" aria-label="Lọc type">
+          <button type="button" class="type-filter selected" data-ab-filter="all">ALL</button>
+          <button type="button" class="type-filter" data-ab-filter="physical">PHY</button>
+          <button type="button" class="type-filter" data-ab-filter="magic">MAG</button>
+          <button type="button" class="type-filter" data-ab-filter="elemental">ELE</button>
+          <button type="button" class="type-filter" data-ab-filter="bard">BARD</button>
+        </div>
+        <div id="ability-options" class="upgrade-grid"></div>
+      </div>
+    </div>
+
+    <!-- Pause + build summary -->
+    <div id="pause" class="overlay hidden">
+      <div class="overlay-panel pause-panel">
+        <h2>TẠM DỪNG</h2>
+        <div id="build-summary" class="build-summary" aria-label="Build hiện tại"></div>
+        <button id="btn-resume" type="button">Tiếp tục</button>
+        <button id="btn-menu" type="button" class="secondary">Về menu</button>
+      </div>
+    </div>
+
+    <!-- In-run Well of Life -->
+    <div id="well-overlay" class="overlay hidden">
+      <div class="overlay-panel well-panel">
+        <h2>WELL OF LIFE</h2>
+        <p id="well-overlay-hint">Heal một lần · bán item lấy gold bank (meta)</p>
+        <div class="well-overlay-actions">
+          <button type="button" id="btn-well-heal">Heal</button>
+          <button type="button" id="btn-well-close" class="secondary">Đóng</button>
+        </div>
+        <div id="well-sell-list" class="well-sell-list"></div>
+      </div>
+    </div>
+
+    <!-- End -->
+    <div id="end" class="overlay hidden">
+      <div class="overlay-panel">
+        <h2 id="end-title">THẮNG</h2>
+        <p id="end-stats"></p>
+        <button id="btn-retry" type="button">Chơi lại</button>
+        <button id="btn-end-menu" type="button" class="secondary">Về menu</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="sfx.js"></script>
+  <script src="menu-portraits.js"></script>
+  <script src="hall-art.js"></script>
+  <script src="ability-icons.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
