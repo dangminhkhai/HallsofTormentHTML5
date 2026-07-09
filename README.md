@@ -2,6 +2,8 @@
 
 Browser prototype inspired by [Halls of Torment](https://hot.fandom.com/wiki/Halls_of_Torment_Wiki) (wiki mechanics, scaled for short runs).
 
+> **For AI / full project context:** see [`PROJECT-CONTEXT.md`](./PROJECT-CONTEXT.md) (constraints, features, art system, file map, remaining work).
+
 ## Play
 
 Open `index.html` in a modern browser (Chrome / Edge / Firefox).  
