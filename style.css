@@ -1812,7 +1812,7 @@ kbd {
   font-weight: 400;
 }
 
-/* Boss HP */
+/* Boss HP — soft glass */
 #boss-bar-wrap {
   position: absolute;
   top: 12px;
@@ -1825,28 +1825,29 @@ kbd {
 }
 
 .boss-name {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #e8a0a0;
-  margin-bottom: 4px;
-  text-shadow: 0 1px 4px #000;
+  color: #f0b0b0;
+  margin-bottom: 5px;
+  text-shadow: 0 1px 6px #000, 0 0 12px rgba(200, 60, 80, 0.35);
 }
 
 .boss-bar {
-  height: 14px;
-  background: #1a0a0e;
-  border: 1px solid #6a2030;
-  border-radius: 6px;
+  height: 15px;
+  background: linear-gradient(180deg, #1a0a0e, #12080c);
+  border: 1px solid #7a2838;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 0 16px rgba(180, 40, 60, 0.35);
+  box-shadow: 0 0 18px rgba(180, 40, 60, 0.4), inset 0 1px 0 rgba(255,255,255,0.06);
 }
 
 #boss-fill {
   height: 100%;
   width: 100%;
-  background: linear-gradient(90deg, #5a1018, #c23b3b 55%, #e07070);
+  background: linear-gradient(90deg, #4a1018, #c23b3b 45%, #e88888 100%);
   transition: width 0.12s linear;
+  box-shadow: inset 0 1px 0 rgba(255,200,200,0.25);
 }
 
 /* Wave banner */
@@ -1859,6 +1860,11 @@ kbd {
   text-align: center;
   pointer-events: none;
   animation: bannerIn 0.35s ease-out;
+  padding: 12px 28px;
+  border-radius: 12px;
+  background: rgba(12, 10, 16, 0.55);
+  border: 1px solid rgba(212, 168, 75, 0.25);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
 }
 
 #wave-banner-text {
@@ -1889,10 +1895,11 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 12px;
-  background: #100c16;
-  border: 1px solid #2a2035;
+  padding: 8px 14px;
+  background: linear-gradient(180deg, #14101c, #0e0a14);
+  border: 1px solid #3a2f4a;
   border-top: none;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(212,168,75,0.06);
   font-size: 0.85rem;
   gap: 12px;
 }
@@ -1919,22 +1926,28 @@ kbd {
 
 .bar {
   flex: 1;
-  height: 10px;
-  background: #1a1422;
-  border-radius: 4px;
+  height: 11px;
+  background: linear-gradient(180deg, #120e18, #1a1422);
+  border-radius: 6px;
   overflow: hidden;
   border: 1px solid #2a2035;
   max-width: 200px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.45), 0 0 0 1px rgba(212,168,75,0.04);
 }
 
 .bar > div {
   height: 100%;
   width: 100%;
   transition: width 0.1s linear;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
 }
 
-.hp-bar > div { background: linear-gradient(90deg, #8b2020, var(--blood)); }
-.xp-bar > div { background: linear-gradient(90deg, #3a6a20, var(--xp)); }
+.hp-bar > div {
+  background: linear-gradient(90deg, #6a1818, var(--blood) 55%, #e07070);
+}
+.xp-bar > div {
+  background: linear-gradient(90deg, #2a5018, var(--xp) 55%, #90d060);
+}
 
 .hud-center {
   display: flex;
@@ -1982,18 +1995,20 @@ kbd {
 
 .skill-cd-bar {
   width: 72px;
-  height: 8px;
-  background: #1a1422;
+  height: 9px;
+  background: linear-gradient(180deg, #100e18, #1a1422);
   border: 1px solid #2a2035;
-  border-radius: 4px;
+  border-radius: 5px;
   overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.4);
 }
 
 #skill-cd-fill {
   height: 100%;
   width: 100%;
-  background: linear-gradient(90deg, #2a4a8a, var(--mana));
+  background: linear-gradient(90deg, #243a78, var(--mana) 60%, #90b8ff);
   transition: width 0.08s linear;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
 #skill-hint kbd {
@@ -2456,20 +2471,22 @@ kbd {
 
 .ability-chip {
   font-size: 0.65rem;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 3px 7px;
+  border-radius: 6px;
   border: 1px solid #3a2f4a;
-  background: #1a1422;
+  background: linear-gradient(180deg, #1e1828, #14101a);
   color: var(--text);
   white-space: nowrap;
   max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
 .ability-chip.ready {
   border-color: #5b8def;
-  box-shadow: 0 0 6px rgba(91, 141, 239, 0.25);
+  box-shadow: 0 0 10px rgba(91, 141, 239, 0.35), inset 0 1px 0 rgba(160,200,255,0.12);
+  color: #c8dcff;
 }
 
 .x2-badge {

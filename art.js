@@ -357,6 +357,58 @@ window.HOT_ART = (() => {
       ctx.beginPath();
       ctx.arc(13 * sc, -3 * sc, 1.5 * sc, 0, Math.PI * 2);
       ctx.fill();
+      if (k === "hydra") {
+        softDisc(ctx, -2 * sc, -10 * sc, 4 * sc, col, lite);
+        softDisc(ctx, 4 * sc, -12 * sc, 3.5 * sc, col, lite);
+      }
+    } else if (k === "construct" || k === "golem") {
+      softCapsule(ctx, -8 * sc, -4 * sc, 16 * sc, 16 * sc, col);
+      softDisc(ctx, 0, -12 * sc, 7 * sc, dark, col);
+      ctx.fillStyle = hexA(TOKENS.dmg.magic, 0.55);
+      ctx.fillRect(-3 * sc, -4 * sc, 6 * sc, 8 * sc);
+      ctx.fillStyle = dark;
+      ctx.fillRect(-8 * sc, 10 * sc, 5 * sc, 5 * sc);
+      ctx.fillRect(3 * sc, 10 * sc, 5 * sc, 5 * sc);
+    } else if (k === "tree") {
+      softCapsule(ctx, -4 * sc, -6 * sc, 8 * sc, 20 * sc, dark);
+      softDisc(ctx, 0, -14 * sc, 12 * sc, col, lite);
+      softDisc(ctx, -6 * sc, -10 * sc, 7 * sc, col, lite);
+      softDisc(ctx, 6 * sc, -10 * sc, 7 * sc, col, lite);
+    } else if (k === "horseman") {
+      softCapsule(ctx, -12 * sc, 0, 20 * sc, 9 * sc, dark);
+      softDisc(ctx, 10 * sc, -1 * sc, 5 * sc, col, lite);
+      softCapsule(ctx, -4 * sc, -12 * sc, 8 * sc, 12 * sc, col);
+      softDisc(ctx, 0, -16 * sc, 5 * sc, col, lite);
+    } else if (k === "fiend") {
+      softCapsule(ctx, -6 * sc, -1 * sc, 12 * sc, 12 * sc, col);
+      softDisc(ctx, 0, -10 * sc, 7 * sc, col, lite);
+      ctx.fillStyle = dark;
+      ctx.beginPath();
+      ctx.moveTo(-6 * sc, -12 * sc);
+      ctx.lineTo(-10 * sc, -20 * sc);
+      ctx.lineTo(-2 * sc, -14 * sc);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(6 * sc, -12 * sc);
+      ctx.lineTo(10 * sc, -20 * sc);
+      ctx.lineTo(2 * sc, -14 * sc);
+      ctx.fill();
+      ctx.fillStyle = "#ff8040";
+      ctx.beginPath();
+      ctx.arc(-2 * sc, -10 * sc, 1.5 * sc, 0, Math.PI * 2);
+      ctx.arc(3 * sc, -10 * sc, 1.5 * sc, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (k === "mimic") {
+      // chest-like body with bite
+      softCapsule(ctx, -12 * sc, -4 * sc, 24 * sc, 16 * sc, col);
+      ctx.fillStyle = shade(col, 0.2);
+      roundRect(ctx, -12 * sc, -12 * sc, 24 * sc, 10 * sc, 3 * sc);
+      ctx.fill();
+      ctx.fillStyle = TOKENS.gold;
+      softDisc(ctx, 0, -1 * sc, 3 * sc, TOKENS.gold, "#fff0a0");
+      ctx.fillStyle = "#1a1010";
+      ctx.fillRect(-8 * sc, 2 * sc, 3 * sc, 4 * sc);
+      ctx.fillRect(5 * sc, 2 * sc, 3 * sc, 4 * sc);
     } else {
       // imp / default
       softCapsule(ctx, -5 * sc, -1 * sc, 10 * sc, 11 * sc, col);
@@ -457,21 +509,616 @@ window.HOT_ART = (() => {
     return TOKENS.element[element] || TOKENS.dmg.physical;
   }
 
-  /** Soft weapon slash trail */
-  function softSlash(ctx, x, y, aim, r, color, alpha) {
+  /**
+   * Soft weapon slash trail.
+   * aim = mid angle; optional a0/a1 override span. Or pass span via 8th arg.
+   */
+  function softSlash(ctx, x, y, aim, r, color, alpha, a0, a1) {
+    const a = alpha != null ? alpha : 0.45;
+    const c = color || TOKENS.gold;
+    let start = a0 != null ? a0 : aim - 0.95;
+    let end = a1 != null ? a1 : aim + 0.95;
+    if (end < start) {
+      const t = start;
+      start = end;
+      end = t;
+    }
     ctx.save();
-    ctx.globalAlpha = alpha != null ? alpha : 0.45;
-    ctx.strokeStyle = color || TOKENS.gold;
-    ctx.lineWidth = 3;
     ctx.lineCap = "round";
+    // wide soft glow
+    ctx.globalAlpha = a * 0.35;
+    ctx.strokeStyle = c;
+    ctx.lineWidth = 10;
     ctx.beginPath();
-    ctx.arc(x, y, r, aim - 0.9, aim + 0.9);
+    ctx.arc(x, y, r * 0.92, start, end);
     ctx.stroke();
-    ctx.globalAlpha = (alpha != null ? alpha : 0.45) * 0.45;
-    ctx.lineWidth = 7;
+    // main blade arc
+    ctx.globalAlpha = a * 0.9;
+    ctx.lineWidth = 3.2;
+    ctx.strokeStyle = c;
     ctx.beginPath();
-    ctx.arc(x, y, r * 0.88, aim - 0.55, aim + 0.55);
+    ctx.arc(x, y, r, start, end);
     ctx.stroke();
+    // bright core edge
+    ctx.globalAlpha = a * 0.55;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.96, start + 0.12, end - 0.12);
+    ctx.stroke();
+    // tip spark
+    const mid = (start + end) / 2;
+    ctx.globalAlpha = a * 0.7;
+    softDisc(ctx, x + Math.cos(mid) * r, y + Math.sin(mid) * r, 2.8, c, "#fff");
+    ctx.restore();
+  }
+
+  /** Soft projectile: arrow | orb | bolt | shard */
+  function drawSoftProjectile(ctx, x, y, ang, r, color, style) {
+    const c = color || TOKENS.gold;
+    const rr = r || 5;
+    ctx.save();
+    if (style === "orb") {
+      ctx.globalAlpha = 0.28;
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.arc(x, y, rr * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      softDisc(ctx, x, y, rr + 1.5, c, shade(c, 0.4));
+      ctx.fillStyle = hexA("#fff", 0.55);
+      ctx.beginPath();
+      ctx.arc(x - rr * 0.25, y - rr * 0.3, rr * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (style === "bolt" || style === "shard") {
+      ctx.translate(x, y);
+      ctx.rotate(ang || 0);
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, rr * 2.4, rr * 1.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      const g = ctx.createLinearGradient(-rr * 2, 0, rr * 2.2, 0);
+      g.addColorStop(0, hexA(c, 0.2));
+      g.addColorStop(0.4, c);
+      g.addColorStop(1, "#ffffff");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(rr * 2.4, 0);
+      ctx.lineTo(-rr * 1.2, -rr * 0.7);
+      ctx.lineTo(-rr * 0.6, 0);
+      ctx.lineTo(-rr * 1.2, rr * 0.7);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // arrow default
+      ctx.translate(x, y);
+      ctx.rotate(ang || 0);
+      ctx.globalAlpha = 0.22;
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.arc(0, 0, rr * 2.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      const g = ctx.createLinearGradient(-10, 0, 12, 0);
+      g.addColorStop(0, shade(c, -0.2));
+      g.addColorStop(0.55, c);
+      g.addColorStop(1, "#f0f0f0");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 9, Math.max(2.4, rr * 0.65), 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = hexA("#fff", 0.45);
+      ctx.beginPath();
+      ctx.ellipse(-2, -1, 4, 1.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#e8e8e8";
+      ctx.beginPath();
+      ctx.moveTo(6, 0);
+      ctx.lineTo(12, -3);
+      ctx.lineTo(12, 3);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+    return true;
+  }
+
+  /** Soft miniboss crown + aura */
+  function drawSoftMinibossAura(ctx, x, y, r, t) {
+    const rr = (r || 16) + 10;
+    const pulse = 0.32 + Math.sin((t || 0) * 4) * 0.1;
+    ctx.save();
+    // outer aura
+    const g = ctx.createRadialGradient(x, y, rr * 0.4, x, y, rr + 8);
+    g.addColorStop(0, hexA("#c080e0", pulse * 0.35));
+    g.addColorStop(1, "transparent");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, rr + 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = pulse + 0.15;
+    ctx.strokeStyle = "#c080e0";
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(x, y, rr, 0, Math.PI * 2);
+    ctx.stroke();
+    // crown
+    const cy = y - (r || 16) - 10;
+    ctx.globalAlpha = 1;
+    const cg = ctx.createLinearGradient(x - 8, cy - 8, x + 8, cy + 4);
+    cg.addColorStop(0, "#e0b0ff");
+    cg.addColorStop(1, "#a050d0");
+    ctx.fillStyle = cg;
+    ctx.beginPath();
+    ctx.moveTo(x - 7, cy);
+    ctx.lineTo(x - 4, cy - 9);
+    ctx.lineTo(x - 1, cy - 2);
+    ctx.lineTo(x + 1, cy - 2);
+    ctx.lineTo(x + 4, cy - 9);
+    ctx.lineTo(x + 7, cy);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#fff0a0";
+    ctx.beginPath();
+    ctx.arc(x, cy - 1, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /** Soft floating combat text */
+  function drawSoftFloatingText(ctx, text, x, y, color, alpha) {
+    const a = alpha != null ? alpha : 1;
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.font = "bold 13px Segoe UI";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    // soft plate behind big numbers / keywords
+    if (text && (text.length <= 5 || /crit|crit!|!/i.test(text))) {
+      const w = Math.min(72, 10 + String(text).length * 7);
+      ctx.fillStyle = "rgba(8,6,12,0.45)";
+      roundRect(ctx, x - w / 2, y - 9, w, 16, 5);
+      ctx.fill();
+    }
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillText(text, x + 1, y + 1);
+    ctx.fillStyle = color || "#fff";
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
+  /** Soft status ring with orbiting dots */
+  function softStatusRing(ctx, x, y, r, color, phase, t) {
+    const pulse = 0.32 + Math.sin((t || 0) * 6 + (phase || 0)) * 0.12;
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    // soft fill wash
+    ctx.globalAlpha = pulse * 0.12;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    for (let i = 0; i < 4; i++) {
+      const a = (t || 0) * 3 + (phase || 0) + (i * Math.PI * 2) / 4;
+      ctx.globalAlpha = 0.55;
+      const px = x + Math.cos(a) * r;
+      const py = y + Math.sin(a) * r;
+      const g = ctx.createRadialGradient(px, py, 0.3, px, py, 2.8);
+      g.addColorStop(0, "#fff");
+      g.addColorStop(0.4, color);
+      g.addColorStop(1, "transparent");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(px, py, 2.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** Soft AOE burst / ring */
+  function drawSoftAoe(ctx, x, y, r, color, alpha, style) {
+    const c = color || TOKENS.gold;
+    const a = alpha != null ? alpha : 0.4;
+    ctx.save();
+    if (style === "ring") {
+      ctx.globalAlpha = a * 0.25;
+      ctx.strokeStyle = c;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = a * 0.12;
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // burst
+      const g = ctx.createRadialGradient(x, y, 2, x, y, r);
+      g.addColorStop(0, hexA(c, Math.min(0.55, a)));
+      g.addColorStop(0.55, hexA(c, a * 0.25));
+      g.addColorStop(1, "transparent");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = a * 0.7;
+      ctx.strokeStyle = c;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(x, y, r * 0.92, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /** Soft summon (golem / spirit / minion) */
+  function drawSoftSummon(ctx, kind, color, x, y, facing, scale) {
+    const col = color || "#a08060";
+    const sc = scale || 1;
+    const f = facing < 0 ? -1 : 1;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(f, 1);
+    if (kind === "golem" || kind === "item_skel" || kind === "item_skel_mage") {
+      softCapsule(ctx, -7 * sc, -4 * sc, 14 * sc, 16 * sc, col);
+      softDisc(ctx, 0, -12 * sc, 7 * sc, col, shade(col, 0.2));
+      softCapsule(ctx, -10 * sc, 0, 5 * sc, 10 * sc, shade(col, -0.15));
+      softCapsule(ctx, 5 * sc, 0, 5 * sc, 10 * sc, shade(col, -0.15));
+      ctx.fillStyle = shade(col, -0.3);
+      ctx.fillRect(-6 * sc, 10 * sc, 4 * sc, 6 * sc);
+      ctx.fillRect(2 * sc, 10 * sc, 4 * sc, 6 * sc);
+    } else if (kind === "spirit" || String(kind || "").includes("spirit")) {
+      ctx.globalAlpha = 0.9;
+      softDisc(ctx, 0, -6 * sc, 8 * sc, col, shade(col, 0.3));
+      softCapsule(ctx, -5 * sc, -2 * sc, 10 * sc, 12 * sc, col);
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(-2 * sc, -7 * sc, 1.5 * sc, 0, Math.PI * 2);
+      ctx.arc(3 * sc, -7 * sc, 1.5 * sc, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    } else if (kind === "item_hound" || kind === "hound") {
+      softCapsule(ctx, -9 * sc, -2 * sc, 14 * sc, 7 * sc, col);
+      softDisc(ctx, 7 * sc, -2 * sc, 4.5 * sc, col, shade(col, 0.2));
+    } else {
+      // generic minion / imp / rat
+      softCapsule(ctx, -5 * sc, -1 * sc, 10 * sc, 10 * sc, col);
+      softDisc(ctx, 0, -8 * sc, 5.5 * sc, col, shade(col, 0.2));
+    }
+    // ally ring
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = TOKENS.gold;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(0, 12 * sc, 10 * sc, 3.5 * sc, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    return true;
+  }
+
+  /** Soft chest (rarity tint) */
+  function drawSoftChest(ctx, x, y, rarity) {
+    const r = rarity || 1;
+    const wood = r >= 3 ? "#a87820" : r >= 2 ? "#6a4080" : "#6a4020";
+    const lid = r >= 3 ? "#f0d060" : r >= 2 ? "#b080e0" : "#c09050";
+    const lock = r >= 3 ? "#fff0a0" : r >= 2 ? "#e0c0ff" : TOKENS.gold;
+    ctx.save();
+    ctx.translate(x, y);
+    // body
+    const g = ctx.createLinearGradient(-14, -8, 14, 12);
+    g.addColorStop(0, shade(wood, 0.15));
+    g.addColorStop(1, shade(wood, -0.15));
+    ctx.fillStyle = g;
+    roundRect(ctx, -14, -6, 28, 18, 3);
+    ctx.fill();
+    ctx.strokeStyle = TOKENS.outline;
+    ctx.lineWidth = 1.2;
+    roundRect(ctx, -14, -6, 28, 18, 3);
+    ctx.stroke();
+    // lid
+    ctx.fillStyle = lid;
+    roundRect(ctx, -14, -12, 28, 9, 3);
+    ctx.fill();
+    // lock
+    softDisc(ctx, 0, -1, 3.5, lock, shade(lock, 0.3));
+    if (r >= 2) {
+      ctx.globalAlpha = 0.25;
+      ctx.strokeStyle = lock;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 18, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+    return true;
+  }
+
+  /** Soft barrel */
+  function drawSoftBarrel(ctx, x, y) {
+    ctx.save();
+    ctx.translate(x, y);
+    const g = ctx.createLinearGradient(-12, -14, 12, 14);
+    g.addColorStop(0, "#9a7040");
+    g.addColorStop(0.5, "#6a4020");
+    g.addColorStop(1, "#4a2810");
+    ctx.fillStyle = g;
+    roundRect(ctx, -12, -14, 24, 28, 6);
+    ctx.fill();
+    ctx.strokeStyle = "#3a2010";
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, -12, -14, 24, 28, 6);
+    ctx.stroke();
+    // bands
+    ctx.fillStyle = "#c09050";
+    ctx.fillRect(-12, -10, 24, 3);
+    ctx.fillRect(-12, 6, 24, 3);
+    ctx.fillStyle = shade("#c09050", 0.2);
+    ctx.fillRect(-2, -4, 4, 10);
+    ctx.restore();
+    return true;
+  }
+
+  /** Soft well */
+  function drawSoftWell(ctx, x, y, r, bob) {
+    const rr = r || 20;
+    ctx.save();
+    // base stone
+    ctx.fillStyle = "#2a3040";
+    ctx.beginPath();
+    ctx.ellipse(x, y + 6, rr + 5, rr * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    softDisc(ctx, x, y, rr, "#3a4858", "#5a6878");
+    // water
+    const g = ctx.createRadialGradient(x - 4, y - 4, 2, x, y, rr - 5);
+    g.addColorStop(0, "#90e0f8");
+    g.addColorStop(0.5, "#40a0d0");
+    g.addColorStop(1, "#184868");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, rr - 6, 0, Math.PI * 2);
+    ctx.fill();
+    // shimmer
+    ctx.globalAlpha = 0.35 + Math.sin((bob || 0) * 2) * 0.1;
+    ctx.strokeStyle = "#c0f0ff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, rr + 4, 0.2, Math.PI * 1.3);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.font = "bold 11px Segoe UI";
+    ctx.fillStyle = "#a0e0ff";
+    ctx.textAlign = "center";
+    ctx.fillText("GIẾNG", x, y - rr - 8);
+    ctx.restore();
+    return true;
+  }
+
+  /** Soft orbit orb (ability) */
+  function drawSoftOrb(ctx, x, y, r, color, shape) {
+    const c = color || TOKENS.dmg.magic;
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    if (shape === "blade") {
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.ellipse(x, y, r * 1.6, r * 0.55, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = hexA("#fff", 0.4);
+      ctx.beginPath();
+      ctx.ellipse(x - 1, y - 1, r * 0.7, r * 0.25, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      softDisc(ctx, x, y, r + 1, c, shade(c, 0.35));
+    }
+    ctx.restore();
+    return true;
+  }
+
+  /** Soft map pillar / prop by hall style */
+  function drawSoftPillar(ctx, x, y, style, prop, lite) {
+    const p = prop || "#1a1524";
+    const l = lite || "#3a3050";
+    ctx.save();
+    ctx.translate(x, y);
+    if (style === "frozen") {
+      const g = ctx.createLinearGradient(-10, -40, 10, 16);
+      g.addColorStop(0, "rgba(200,240,255,0.55)");
+      g.addColorStop(1, "rgba(80,140,180,0.35)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(-10, 14);
+      ctx.lineTo(-5, -38);
+      ctx.lineTo(5, -38);
+      ctx.lineTo(10, 14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(180,220,255,0.4)";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      // ice shard tip
+      ctx.fillStyle = "rgba(220,245,255,0.5)";
+      ctx.beginPath();
+      ctx.moveTo(0, -42);
+      ctx.lineTo(-4, -34);
+      ctx.lineTo(4, -34);
+      ctx.fill();
+    } else if (style === "ember") {
+      softCapsule(ctx, -10, -36, 20, 48, p);
+      const lg = ctx.createLinearGradient(0, 0, 0, 16);
+      lg.addColorStop(0, hexA("#ff9040", 0.55));
+      lg.addColorStop(1, hexA("#ff3010", 0.15));
+      ctx.fillStyle = lg;
+      ctx.fillRect(-3, 0, 6, 14);
+      ctx.globalAlpha = 0.35;
+      softDisc(ctx, 0, 10, 8, "#ff6020", "#ffc080");
+      ctx.globalAlpha = 1;
+    } else if (style === "vault") {
+      softCapsule(ctx, -10, -40, 20, 52, p);
+      ctx.fillStyle = hexA(TOKENS.gold, 0.3);
+      ctx.fillRect(-4, -28, 8, 28);
+      ctx.fillStyle = l;
+      roundRect(ctx, -14, -46, 28, 8, 2);
+      ctx.fill();
+      // gold crest
+      softDisc(ctx, 0, -20, 4, TOKENS.gold, "#fff0a0");
+    } else if (style === "bog") {
+      ctx.strokeStyle = p;
+      ctx.lineWidth = 5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(0, 14);
+      ctx.quadraticCurveTo(8, -8, -2, -40);
+      ctx.stroke();
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-2, -16);
+      ctx.lineTo(-12, -28);
+      ctx.moveTo(0, -22);
+      ctx.lineTo(12, -30);
+      ctx.stroke();
+      // leaf soft
+      ctx.globalAlpha = 0.45;
+      softDisc(ctx, -10, -30, 5, "#406040", "#70a060");
+      softDisc(ctx, 10, -32, 4.5, "#406040", "#70a060");
+      ctx.globalAlpha = 1;
+    } else if (style === "void" || style === "ritual") {
+      softCapsule(ctx, -9, -38, 18, 50, p);
+      ctx.globalAlpha = 0.4;
+      softDisc(ctx, 0, -20, 10, TOKENS.dmg.magic, "#e0a0ff");
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = hexA("#c080e0", 0.5);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, -8, 12, 0.2, Math.PI * 1.6);
+      ctx.stroke();
+    } else {
+      softCapsule(ctx, -10, -36, 20, 48, p);
+      ctx.fillStyle = l;
+      ctx.fillRect(-4, -22, 8, 24);
+      // top cap
+      roundRect(ctx, -12, -40, 24, 7, 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    return true;
+  }
+
+  /** Soft floor accent puddle (sparse hall décor) */
+  function drawSoftFloorAccent(ctx, x, y, style, color) {
+    ctx.save();
+    if (style === "ember") {
+      const g = ctx.createRadialGradient(x, y, 2, x, y, 28);
+      g.addColorStop(0, hexA("#ff6020", 0.35));
+      g.addColorStop(1, "transparent");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 26, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (style === "frozen") {
+      ctx.fillStyle = hexA("#80c0e0", 0.22);
+      ctx.beginPath();
+      ctx.ellipse(x, y, 24, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = hexA("#c0e8ff", 0.3);
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else if (style === "bog") {
+      ctx.fillStyle = hexA("#406048", 0.35);
+      ctx.beginPath();
+      ctx.ellipse(x, y, 28, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (style === "void" || style === "ritual") {
+      ctx.strokeStyle = hexA(color || TOKENS.dmg.magic, 0.28);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x, y, 18, 0, Math.PI * 2);
+      ctx.stroke();
+      softDisc(ctx, x, y, 4, color || TOKENS.dmg.magic, "#e0c0ff");
+    } else {
+      ctx.fillStyle = hexA(color || "#604080", 0.12);
+      ctx.beginPath();
+      ctx.ellipse(x, y, 20, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** Soft particle (spark / smoke) */
+  function drawSoftParticle(ctx, x, y, size, color, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha != null ? alpha : 1;
+    const g = ctx.createRadialGradient(x, y, 0.5, x, y, size);
+    g.addColorStop(0, hexA("#ffffff", 0.85));
+    g.addColorStop(0.35, hexA(color || TOKENS.gold, 0.8));
+    g.addColorStop(1, "transparent");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /** Soft floating HP bar */
+  function drawSoftHpBar(ctx, x, y, w, h, pct, color) {
+    const p = Math.max(0, Math.min(1, pct));
+    const c = color || TOKENS.blood;
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    roundRect(ctx, x - w / 2 - 1, y - 1, w + 2, h + 2, 3);
+    ctx.fill();
+    ctx.fillStyle = "#1a1218";
+    roundRect(ctx, x - w / 2, y, w, h, 2);
+    ctx.fill();
+    if (p > 0.01) {
+      const g = ctx.createLinearGradient(x - w / 2, y, x + w / 2, y);
+      g.addColorStop(0, shade(c, -0.2));
+      g.addColorStop(0.5, c);
+      g.addColorStop(1, shade(c, 0.15));
+      ctx.fillStyle = g;
+      roundRect(ctx, x - w / 2, y, Math.max(2, w * p), h, 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** Soft cast flash for abilities */
+  function softCastBurst(ctx, x, y, color, t, alpha) {
+    const c = color || TOKENS.dmg.magic;
+    const a = alpha != null ? alpha : 0.6;
+    ctx.save();
+    const g = ctx.createRadialGradient(x, y, 2, x, y, 18 + t * 40);
+    g.addColorStop(0, hexA("#fff", a * 0.7));
+    g.addColorStop(0.3, hexA(c, a * 0.45));
+    g.addColorStop(1, "transparent");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, 18 + t * 40, 0, Math.PI * 2);
+    ctx.fill();
+    for (let i = 0; i < 6; i++) {
+      const ang = (i / 6) * Math.PI * 2 + t * 2;
+      ctx.strokeStyle = c;
+      ctx.globalAlpha = a * 0.8;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(ang) * (16 + t * 36), y + Math.sin(ang) * (16 + t * 36));
+      ctx.stroke();
+    }
     ctx.restore();
   }
 
@@ -497,6 +1144,21 @@ window.HOT_ART = (() => {
     softBodyEllipse,
     drawSoftEnemy,
     drawSoftPickup,
+    drawSoftAoe,
+    drawSoftSummon,
+    drawSoftChest,
+    drawSoftBarrel,
+    drawSoftWell,
+    drawSoftOrb,
+    softCastBurst,
+    drawSoftPillar,
+    drawSoftParticle,
+    drawSoftHpBar,
+    drawSoftProjectile,
+    drawSoftMinibossAura,
+    drawSoftFloatingText,
+    softStatusRing,
+    drawSoftFloorAccent,
     paintMarkIcon,
     paintArtifactIcon,
     paintOnCanvas,
