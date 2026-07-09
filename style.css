@@ -1,4 +1,4 @@
-* {
+﻿* {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -44,7 +44,7 @@ html, body {
   display: none !important;
 }
 
-/* ── Menu: single-screen character select ── */
+/* â”€â”€ Menu: single-screen character select â”€â”€ */
 .menu-screen {
   padding: 0;
   align-items: stretch;
@@ -153,7 +153,7 @@ html, body {
   min-height: 0;
 }
 
-/* ── Hero tab ── */
+/* â”€â”€ Hero tab â”€â”€ */
 #tab-hero {
   min-height: 0;
   overflow: hidden;
@@ -206,14 +206,16 @@ html, body {
   margin-bottom: 0;
 }
 
-/* Right panel: no scroll — stats always fully visible */
+/* Right panel: scroll when tight so text never stacks */
 .hero-tab-detail {
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   padding: 10px 12px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .hero-tab-previews {
@@ -231,7 +233,17 @@ html, body {
 .hero-tab-detail h2 {
   font-size: 1.05rem;
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.25;
+  flex: 0 0 auto;
+  text-align: center;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.hero-tab-detail .detail-weapon {
+  flex: 0 0 auto;
+  line-height: 1.3;
+  word-break: break-word;
 }
 
 .hero-tab-dmg {
@@ -240,6 +252,8 @@ html, body {
   margin: 0;
   color: var(--muted);
   flex: 0 0 auto;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .hero-tab-dmg-pill {
@@ -255,36 +269,69 @@ html, body {
   vertical-align: middle;
 }
 
-.hero-tab-blurb {
+/* Blurb + ability: stacked block lines (never inline clamp).
+   Higher specificity so .detail-blurb max-height/overflow cannot crush this. */
+.hero-tab-detail .hero-tab-blurb.detail-blurb,
+.hero-tab-detail #hero-tab-blurb {
   flex: 0 0 auto;
-  max-height: none;
-  overflow: hidden;
-  font-size: 0.68rem;
+  max-height: none !important;
+  overflow: visible !important;
+  font-size: 0.72rem;
   margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.hero-tab-blurb li {
-  padding: 1px 0;
-  border: none;
-  display: inline;
-}
-
-.hero-tab-blurb li::after {
-  content: " · ";
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  list-style: none;
+  line-height: 1.4;
   color: var(--muted);
-  opacity: 0.6;
 }
 
-.hero-tab-blurb li:last-child::after {
-  content: "";
+.hero-tab-detail .hero-tab-blurb li {
+  display: block;
+  padding: 2px 0;
+  border: none;
+  border-bottom: 1px solid rgba(42, 32, 53, 0.45);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
 }
 
-/* Stats: compact 2-column grid — full list, no scroll */
+.hero-tab-detail .hero-tab-blurb li:last-child {
+  border-bottom: none;
+}
+
+.hero-tab-detail .hero-tab-blurb li.hero-tab-skill {
+  color: #d8c4a0;
+  font-weight: 600;
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(58, 47, 74, 0.55);
+  border-bottom: none;
+}
+
+.hero-tab-detail .hero-tab-blurb li.hero-tab-skill .skill-label {
+  display: inline-block;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-right: 4px;
+  font-weight: 800;
+}
+
+.hero-tab-detail .hero-tab-blurb li.hero-tab-skill .skill-desc {
+  display: block;
+  margin-top: 2px;
+  font-weight: 500;
+  font-size: 0.68rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+/* Stats: compact 2-column grid; cells never overflow into neighbors */
 .hero-stat-panel-lg {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   min-height: 0;
   overflow: visible;
   display: flex;
@@ -294,14 +341,23 @@ html, body {
 
 .hero-stat-panel-lg .hero-stat-head-lg {
   display: grid;
-  grid-template-columns: 1fr 0.7fr 0.9fr 1fr 0.7fr 0.9fr;
-  gap: 2px 8px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.7fr) minmax(0, 0.95fr) 8px minmax(0, 1.35fr) minmax(0, 0.7fr) minmax(0, 0.95fr);
+  gap: 2px 6px;
   padding: 4px 6px 3px;
-  font-size: 0.55rem;
-  letter-spacing: 0.06em;
+  font-size: 0.52rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
   border-bottom: 1px solid rgba(58, 47, 74, 0.7);
+  align-items: end;
+}
+
+.hero-stat-panel-lg .hero-stat-head-lg > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 .hero-stat-panel-lg .hero-stat-head-lg .col-base {
@@ -314,23 +370,31 @@ html, body {
   color: #80c070;
 }
 
+.hero-stat-panel-lg .hero-stat-head-lg .col-pad {
+  padding: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 .hero-stat-panel-lg .hero-stat-rows {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 12px;
   overflow: visible;
   flex: 0 0 auto;
   padding: 2px 4px 2px;
-  column-gap: 10px;
 }
 
 .hero-stat-panel-lg .hero-stat-row {
-  padding: 1px 3px;
-  font-size: 0.63rem;
-  line-height: 1.25;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.7fr) minmax(0, 0.95fr);
+  gap: 4px 6px;
+  padding: 3px 2px;
+  font-size: 0.62rem;
+  line-height: 1.3;
   border-bottom: 1px solid rgba(42, 32, 53, 0.35);
-  grid-template-columns: 1fr 0.7fr 0.9fr;
-  gap: 2px;
+  align-items: start;
+  min-width: 0;
 }
 
 .hero-stat-panel-lg .hero-stat-row.hero-stat-cols-label {
@@ -339,7 +403,21 @@ html, body {
 
 .hero-stat-panel-lg .hero-stat-row .st-name {
   font-size: 0.6rem;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
+  min-width: 0;
+  line-height: 1.3;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  padding-right: 2px;
+}
+
+.hero-stat-panel-lg .hero-stat-row .st-base,
+.hero-stat-panel-lg .hero-stat-row .st-final {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 .hero-stat-panel-lg .hero-stat-row .st-delta {
@@ -352,7 +430,8 @@ html, body {
   flex: 0 0 auto;
   padding: 3px 6px 4px;
   font-size: 0.58rem;
-  line-height: 1.25;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .hero-tab-actions {
@@ -386,6 +465,13 @@ html, body {
   .hero-stat-panel-lg .hero-stat-rows {
     grid-template-columns: 1fr;
   }
+  .hero-stat-panel-lg .hero-stat-head-lg {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.7fr) minmax(0, 0.95fr);
+  }
+  .hero-stat-panel-lg .hero-stat-head-lg .col-pad,
+  .hero-stat-panel-lg .hero-stat-head-lg .col-dup {
+    display: none;
+  }
 }
 
 @media (max-width: 960px) {
@@ -398,7 +484,27 @@ html, body {
     overflow: visible;
   }
   .hero-stat-panel-lg .hero-stat-rows {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .hero-stat-panel-lg .hero-stat-head-lg {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.7fr) minmax(0, 0.95fr) 8px minmax(0, 1.35fr) minmax(0, 0.7fr) minmax(0, 0.95fr);
+  }
+  .hero-stat-panel-lg .hero-stat-head-lg .col-pad,
+  .hero-stat-panel-lg .hero-stat-head-lg .col-dup {
+    display: block;
+  }
+}
+
+@media (max-width: 520px) {
+  .hero-stat-panel-lg .hero-stat-rows {
+    grid-template-columns: 1fr;
+  }
+  .hero-stat-panel-lg .hero-stat-head-lg {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.75fr) minmax(0, 1fr);
+  }
+  .hero-stat-panel-lg .hero-stat-head-lg .col-pad,
+  .hero-stat-panel-lg .hero-stat-head-lg .col-dup {
+    display: none;
   }
 }
 
@@ -517,7 +623,7 @@ html, body {
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
 }
 
-/* Default: stack name → desc → cost (full width, no broken syllables) */
+/* Default: stack name â†’ desc â†’ cost (full width, no broken syllables) */
 .camp-card {
   text-align: left;
   padding: 10px 12px;
@@ -804,28 +910,7 @@ html, body {
   border-color: rgba(212, 168, 75, 0.45);
 }
 
-.zone-halls.mode-disabled {
-  opacity: 0.45;
-  pointer-events: none;
-  position: relative;
-}
-
-.zone-halls.mode-disabled::after {
-  content: "Torment · hall random";
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.85rem;
-  color: #c080e0;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  background: rgba(12, 10, 16, 0.55);
-  border-radius: 8px;
-  pointer-events: none;
-}
+/* Torment: #zone-halls uses .hidden (hall random at start) — no dim overlay */
 
 .diff-row {
   display: grid;
@@ -1403,7 +1488,7 @@ html, body {
   border-bottom: 1px solid rgba(42, 32, 53, 0.7);
 }
 
-/* Hero stats: Base | Final (gear + blessings) — no scroll on Hero tab */
+/* Hero stats: Base | Final (gear + blessings) â€” no scroll on Hero tab */
 .hero-stat-panel {
   flex: 1 1 auto;
   min-height: 0;
@@ -1584,26 +1669,65 @@ kbd {
   .hall-grid {
     grid-template-columns: repeat(4, 1fr);
   }
-  .hero-detail {
+  /* Compact only RUN sidebar — do NOT collapse Hero tab detail */
+  #tab-run .hero-detail,
+  #select-detail.hero-detail {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px 12px;
   }
-  .detail-previews { flex: 0 0 auto; }
-  .detail-portrait { width: 56px; height: 56px; }
-  .detail-hall-art { width: 80px; height: 50px; }
-  .hero-detail h2 { flex: 1; text-align: left; font-size: 1rem; }
-  .detail-weapon { width: 100%; text-align: left; }
-  .detail-blurb { display: none; }
-  .detail-picks { width: 100%; }
-  .btn-start { width: auto; min-width: 140px; margin-left: auto; }
+  #tab-run .detail-previews,
+  #select-detail .detail-previews { flex: 0 0 auto; }
+  #tab-run .detail-portrait,
+  #select-detail .detail-portrait { width: 56px; height: 56px; }
+  #tab-run .detail-hall-art,
+  #select-detail .detail-hall-art { width: 80px; height: 50px; }
+  #tab-run .hero-detail h2,
+  #select-detail.hero-detail h2 { flex: 1; text-align: left; font-size: 1rem; }
+  #tab-run .detail-weapon,
+  #select-detail .detail-weapon { width: 100%; text-align: left; }
+  #tab-run .detail-blurb,
+  #select-detail .detail-blurb { display: none; }
+  #tab-run .detail-picks,
+  #select-detail .detail-picks { width: 100%; }
+  #tab-run .btn-start,
+  #select-detail .btn-start { width: auto; min-width: 140px; margin-left: auto; }
+
+  /* Hero tab stays vertical stack; name / ability never side-collide */
+  #tab-hero .hero-tab-detail {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 6px;
+  }
+  #tab-hero .hero-tab-detail h2 {
+    flex: 0 0 auto;
+    width: 100%;
+    text-align: center;
+  }
+  #tab-hero .hero-tab-detail .detail-weapon,
+  #tab-hero .hero-tab-detail .hero-tab-dmg {
+    width: 100%;
+    text-align: center;
+  }
+  #tab-hero .hero-tab-detail .detail-blurb,
+  #tab-hero .hero-tab-detail #hero-tab-blurb {
+    display: flex !important;
+    width: 100%;
+    max-height: none !important;
+  }
+  #tab-hero .hero-tab-portrait {
+    width: 72px !important;
+    height: 72px !important;
+  }
 }
 
 @media (max-height: 780px) {
   .hall-card .hall-art { max-height: 52px; }
   .class-card .portrait { max-width: 52px; }
-  .detail-blurb { max-height: 80px; overflow: auto; }
+  #tab-run .detail-blurb,
+  #select-detail .detail-blurb { max-height: 80px; overflow: auto; }
 }
 
 @media (max-height: 700px) {
@@ -1633,7 +1757,7 @@ kbd {
   box-shadow: 0 0 60px rgba(80, 40, 100, 0.25);
 }
 
-/* Character status panel — top left */
+/* Character status panel â€” top left */
 /* Status panel: full Vietnamese labels (wider) */
 #status-panel .st-label {
   min-width: 7.5em;
@@ -1680,7 +1804,7 @@ kbd {
   flex: 0 0 auto;
   z-index: 1;
 }
-/* Chỉ số cuộn nếu dài */
+/* Chá»‰ sá»‘ cuá»™n náº¿u dÃ i */
 .status-stats {
   flex: 0 1 auto;
   min-height: 0;
@@ -1696,7 +1820,7 @@ kbd {
   background: #4a3a60;
   border-radius: 4px;
 }
-/* Trang bị — nửa dưới panel trái */
+/* Trang bá»‹ â€” ná»­a dÆ°á»›i panel trÃ¡i */
 .status-gear-block {
   flex: 1 1 auto;
   min-height: 100px;
@@ -1910,7 +2034,7 @@ kbd {
   margin: 6px 0;
 }
 
-/* Ability stats panel — full height right, scroll list */
+/* Ability stats panel â€” full height right, scroll list */
 #ability-panel {
   position: absolute;
   top: 8px;
@@ -1927,7 +2051,7 @@ kbd {
   border: 1px solid #2a3550;
   border-radius: 10px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(91, 141, 239, 0.1);
-  /* Bật pointer — trước đây none nên không scroll được */
+  /* Báº­t pointer â€” trÆ°á»›c Ä‘Ã¢y none nÃªn khÃ´ng scroll Ä‘Æ°á»£c */
   pointer-events: auto;
   font-size: 0.75rem;
   backdrop-filter: blur(4px);
@@ -2053,7 +2177,7 @@ kbd {
   font-variant-numeric: tabular-nums;
 }
 
-/* Ability pick cards — show stats */
+/* Ability pick cards â€” show stats */
 .upgrade-btn .ab-pick-stats {
   display: block;
   margin-top: 0.35rem;
@@ -2063,7 +2187,7 @@ kbd {
   font-weight: 400;
 }
 
-/* Boss HP — soft glass */
+/* Boss HP â€” soft glass */
 #boss-bar-wrap {
   position: absolute;
   top: 12px;
@@ -2426,7 +2550,7 @@ kbd {
   border-color: rgba(138, 180, 255, 0.45);
 }
 
-/* ── Level-up: phân loại rõ · gọn 1 màn, không scroll ───── */
+/* â”€â”€ Level-up: phÃ¢n loáº¡i rÃµ Â· gá»n 1 mÃ n, khÃ´ng scroll â”€â”€â”€â”€â”€ */
 .levelup-panel {
   max-width: min(520px, 94vw);
   width: min(520px, 94vw);
@@ -2489,7 +2613,7 @@ kbd {
   opacity: 0.88;
 }
 
-/* 4 thẻ fit màn — không scroll */
+/* 4 tháº» fit mÃ n â€” khÃ´ng scroll */
 .upgrade-grid.levelup-grid {
   display: flex;
   flex-direction: column;
@@ -2502,7 +2626,7 @@ kbd {
   text-align: left;
 }
 
-/* Section head gọn (1 dòng) */
+/* Section head gá»n (1 dÃ²ng) */
 .lu-section-head {
   display: flex;
   align-items: center;
@@ -2533,7 +2657,7 @@ kbd {
   color: var(--cat, var(--gold));
 }
 
-/* Ẩn tip dài — badge thẻ đã đủ */
+/* áº¨n tip dÃ i â€” badge tháº» Ä‘Ã£ Ä‘á»§ */
 .lu-section-head em {
   display: none;
 }
@@ -2611,7 +2735,7 @@ kbd {
   letter-spacing: 0.03em;
 }
 
-/* Ẩn meta tip — badge + tên đủ cho màn gọn */
+/* áº¨n meta tip â€” badge + tÃªn Ä‘á»§ cho mÃ n gá»n */
 .lu-meta {
   display: none !important;
 }
@@ -2622,7 +2746,7 @@ kbd {
   color: var(--muted) !important;
   line-height: 1.25 !important;
   font-weight: 400 !important;
-  /* tối đa 2 dòng */
+  /* tá»‘i Ä‘a 2 dÃ²ng */
   display: -webkit-box !important;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -2789,7 +2913,7 @@ kbd {
   line-height: 1.3;
 }
 
-/* Sách Bậc Thầy — vừa 1 màn, không scroll */
+/* SÃ¡ch Báº­c Tháº§y â€” vá»«a 1 mÃ n, khÃ´ng scroll */
 .ability-panel {
   max-width: min(1180px, 96vw);
   width: min(1180px, 96vw);
@@ -2822,13 +2946,13 @@ kbd {
   padding-right: 0;
 }
 
-/* Full catalog: MỌI ability trong 1 màn — không scroll */
+/* Full catalog: Má»ŒI ability trong 1 mÃ n â€” khÃ´ng scroll */
 .ability-panel .upgrade-grid.ability-full-list {
   display: grid;
-  /* ~7 cột × vài hàng cho ~27 ability + 4 tiêu đề nhóm */
+  /* ~7 cá»™t Ã— vÃ i hÃ ng cho ~27 ability + 4 tiÃªu Ä‘á» nhÃ³m */
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
-  overflow: hidden; /* không scroll */
+  overflow: hidden; /* khÃ´ng scroll */
   max-height: none;
   height: auto;
   flex: 0 1 auto;
@@ -2953,7 +3077,7 @@ kbd {
   align-items: center;
 }
 
-/* Full grid: chỉ icon + tên — chỉ số xem tooltip (hover) để vừa 1 màn */
+/* Full grid: chá»‰ icon + tÃªn â€” chá»‰ sá»‘ xem tooltip (hover) Ä‘á»ƒ vá»«a 1 mÃ n */
 .ability-panel .upgrade-grid.ability-full-list .upgrade-btn > span:not(.ab-dmg-badge) {
   display: none !important;
 }
@@ -2969,7 +3093,7 @@ kbd {
   padding: 0 2px;
 }
 
-/* Panel full-list: rộng vừa, không tràn viewport */
+/* Panel full-list: rá»™ng vá»«a, khÃ´ng trÃ n viewport */
 .ability-panel.ability-panel-fullscreen {
   width: min(1180px, 96vw);
   max-width: min(1180px, 96vw);
@@ -2978,7 +3102,7 @@ kbd {
   border-radius: 14px;
 }
 
-/* 3-pick / nâng cấp: panel nhỏ hơn */
+/* 3-pick / nÃ¢ng cáº¥p: panel nhá» hÆ¡n */
 .ability-panel:not(.ability-panel-fullscreen) {
   width: min(720px, 94vw);
   max-width: min(720px, 94vw);
@@ -3054,7 +3178,7 @@ kbd {
 }
 
 /* -------------------------------------------
-   UI/UX polish � start bar, camp tabs, toast, HUD
+   UI/UX polish ï¿½ start bar, camp tabs, toast, HUD
    ------------------------------------------- */
 
 .row-between {
@@ -3441,5 +3565,480 @@ kbd {
   #ability-panel {
     top: 4px;
     bottom: 4px;
+  }
+}
+
+
+
+/* ============================================================
+   MOBILE IN-RUN — portrait 9:16 dedicated layout
+   Floating stick (spawn at touch) · glass chrome · full bleed
+   ============================================================ */
+
+.mobile-controls {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+}
+.mobile-controls.hidden { display: none !important; }
+
+/* Full-screen invisible pad — chạm để spawn stick */
+.touch-move-pad {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.mobile-controls.joy-enabled .touch-move-pad {
+  display: block;
+  pointer-events: auto;
+}
+
+/* Top vignette chrome (portrait only) */
+.m-top-chrome {
+  display: none;
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 72px;
+  z-index: 11;
+  pointer-events: none;
+}
+.m-top-glass {
+  height: 100%;
+  background: linear-gradient(180deg, rgba(8,6,12,0.72), transparent);
+}
+
+/* Pause button */
+.mobile-pause-btn {
+  pointer-events: auto;
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top, 12px));
+  right: max(12px, env(safe-area-inset-right, 12px));
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 16;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  background: radial-gradient(circle at 35% 30%, rgba(90, 70, 45, 0.95), rgba(16, 12, 22, 0.94));
+  box-shadow:
+    0 0 0 1.5px rgba(212, 168, 75, 0.5),
+    0 8px 22px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mobile-pause-btn:active { transform: scale(0.94); }
+.mp-icon {
+  width: 14px; height: 14px; position: relative; display: block;
+}
+.mp-icon::before,
+.mp-icon::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #f0d080, var(--gold));
+}
+.mp-icon::before { left: 1px; }
+.mp-icon::after { right: 1px; }
+
+/* Floating stick — positioned by JS at touch origin; geometry measured for accuracy */
+.virtual-joystick.vj-float {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 128px;
+  height: 128px;
+  margin: -64px 0 0 -64px;
+  z-index: 15;
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 0.06s linear, transform 0.06s ease-out;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.virtual-joystick.vj-float.is-idle {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.virtual-joystick.vj-float.active {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+}
+.vj-base {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  position: relative;
+  background: radial-gradient(circle at 40% 32%, rgba(70, 55, 100, 0.52), rgba(10, 8, 16, 0.72) 72%);
+  box-shadow:
+    0 0 0 1.5px rgba(212, 168, 75, 0.42),
+    0 12px 32px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    inset 0 -10px 24px rgba(0,0,0,0.35);
+}
+/* Outer travel ring ≈ match maxR (~78% radius) */
+.vj-ring {
+  position: absolute;
+  inset: 14%;
+  border-radius: 50%;
+  border: 1px dashed rgba(212, 168, 75, 0.32);
+  pointer-events: none;
+}
+.vj-cross { position: absolute; inset: 0; pointer-events: none; opacity: 0.22; }
+.vj-cross::before,
+.vj-cross::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  background: rgba(212, 168, 75, 0.75);
+  border-radius: 1px;
+}
+.vj-cross::before { width: 1px; height: 42%; transform: translate(-50%, -50%); }
+.vj-cross::after { width: 42%; height: 1px; transform: translate(-50%, -50%); }
+.vj-stick {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 48px; height: 48px;
+  margin: -24px 0 0 -24px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle at 35% 28%, #6a5a88, #1a1428 62%, #0c0a12);
+  box-shadow:
+    0 0 0 2px rgba(212, 168, 75, 0.65),
+    0 4px 14px rgba(0,0,0,0.5),
+    inset 0 2px 0 rgba(255,255,255,0.16);
+  will-change: transform;
+  /* No CSS transition — transform is driven every pointermove for 1:1 feel */
+  transition: none;
+}
+.virtual-joystick.active .vj-stick {
+  box-shadow:
+    0 0 0 2px rgba(240, 208, 128, 0.9),
+    0 0 18px rgba(212, 168, 75, 0.4),
+    0 4px 14px rgba(0,0,0,0.5),
+    inset 0 2px 0 rgba(255,255,255,0.2);
+}
+.vj-label { display: none; }
+
+/* ── Portrait 9:16 in-run (body.run-portrait) ── */
+body.run-portrait #game-wrap,
+#game-wrap.run-portrait {
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  flex-direction: column;
+  justify-content: stretch;
+  align-items: stretch;
+  background: #050408;
+  overflow: hidden;
+}
+body.run-portrait #game,
+#game-wrap.run-portrait #game {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  /* 9:16 internal canvas scales to fill width */
+  aspect-ratio: 9 / 16;
+  max-height: calc(100dvh - 86px - env(safe-area-inset-bottom, 0px));
+  object-fit: contain;
+  margin: 0 auto;
+  border: none;
+  box-shadow: none;
+  background: #0a0810;
+  display: block;
+}
+body.run-portrait #status-panel,
+body.run-portrait #ability-panel,
+#game-wrap.run-portrait #status-panel,
+#game-wrap.run-portrait #ability-panel {
+  display: none !important;
+}
+
+/* Bottom glass dock */
+body.run-portrait #hud,
+#game-wrap.run-portrait #hud {
+  width: 100%;
+  max-width: 100%;
+  flex: 0 0 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 8px 12px max(12px, env(safe-area-inset-bottom, 12px));
+  gap: 6px;
+  flex-wrap: wrap;
+  border: none;
+  border-top: 1px solid rgba(212, 168, 75, 0.2);
+  background:
+    linear-gradient(180deg, rgba(24, 18, 36, 0.96), rgba(8, 6, 12, 0.99));
+  box-shadow: 0 -10px 36px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
+  font-size: 0.72rem;
+  z-index: 10;
+}
+body.run-portrait .hud-center,
+#game-wrap.run-portrait .hud-center {
+  flex: 1 1 100%;
+  order: -1;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 0 40px 6px 8px; /* room for pause */
+  margin-bottom: 2px;
+  border-bottom: 1px solid rgba(58, 47, 74, 0.5);
+}
+body.run-portrait #wave-text { font-size: 1.05rem; font-weight: 800; }
+body.run-portrait #class-name { font-size: 0.68rem; letter-spacing: 0.06em; }
+body.run-portrait .hud-left,
+body.run-portrait .hud-right,
+#game-wrap.run-portrait .hud-left,
+#game-wrap.run-portrait .hud-right {
+  flex: 1 1 46%;
+  min-width: 0;
+}
+body.run-portrait .hud-right { align-items: flex-end; }
+body.run-portrait .bar-label { width: auto; min-width: 2em; font-size: 0.62rem; }
+body.run-portrait .bar { max-width: none; height: 9px; border-radius: 6px; }
+body.run-portrait .hud-meta-row { font-size: 0.7rem; gap: 8px; }
+body.run-portrait #ability-hud { max-width: 100%; }
+body.run-portrait .ability-chip {
+  font-size: 0.6rem;
+  padding: 4px 7px;
+  border-radius: 6px;
+  max-width: 80px;
+}
+body.run-portrait #boss-bar-wrap {
+  width: min(88vw, 360px);
+  top: max(14px, env(safe-area-inset-top));
+}
+body.run-portrait .m-top-chrome { display: block; }
+body.run-portrait #wave-banner {
+  top: 18%;
+  width: min(90vw, 340px);
+  padding: 12px 16px;
+  border-radius: 14px;
+}
+body.run-portrait #wave-banner-text {
+  font-size: 1.25rem;
+  letter-spacing: 0.1em;
+}
+
+/* Menu mobile (portrait / narrow) */
+@media (max-width: 760px), ((max-width: 900px) and (orientation: portrait)) {
+  html, body {
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+  }
+  #app { align-items: stretch; min-height: 100dvh; }
+  .screen { min-height: 100dvh; }
+  .menu-screen {
+    background:
+      radial-gradient(ellipse 120% 55% at 50% 0%, rgba(110, 55, 140, 0.3), transparent 55%),
+      radial-gradient(ellipse 90% 40% at 50% 100%, rgba(40, 20, 60, 0.4), transparent 50%),
+      var(--bg);
+  }
+  .menu-shell {
+    max-width: 100%;
+    min-height: 100dvh;
+    padding:
+      max(10px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+    gap: 8px;
+  }
+  .menu-top h1 { font-size: 1.2rem; letter-spacing: 0.12em; }
+  .subtitle { font-size: 0.65rem; }
+  .meta-bar {
+    font-size: 0.75rem;
+    padding: 5px 14px;
+    border-radius: 999px;
+    background: rgba(20, 14, 28, 0.6);
+    border: 1px solid rgba(192, 128, 224, 0.28);
+    width: fit-content;
+    margin: 6px auto 0;
+  }
+  .menu-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 4px;
+    border-radius: 14px;
+    background: rgba(10, 8, 14, 0.7);
+    border: 1px solid rgba(58, 47, 74, 0.75);
+  }
+  .menu-tab {
+    flex: 1;
+    text-align: center;
+    font-size: 0.7rem;
+    padding: 11px 6px;
+    border-radius: 10px;
+    min-height: 42px;
+  }
+  .menu-tab.selected {
+    background: linear-gradient(180deg, rgba(72, 52, 18, 0.98), rgba(34, 24, 10, 0.99));
+    box-shadow: 0 0 0 1px rgba(212, 168, 75, 0.45);
+  }
+  .menu-body {
+    grid-template-columns: 1fr !important;
+    min-height: 0;
+    flex: 1;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 10px;
+  }
+  .zone {
+    border-radius: 14px;
+    padding: 12px;
+    background: rgba(18, 14, 26, 0.78);
+    border: 1px solid rgba(58, 47, 74, 0.7);
+  }
+  .class-grid, .class-grid-dlc {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+  .class-card { padding: 8px 4px; border-radius: 12px; min-height: 76px; }
+  .class-card .portrait { max-width: 50px; }
+  .class-card strong { font-size: 0.62rem; }
+  .hall-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mode-picks { display: flex; flex-direction: column; gap: 7px; }
+  .mode-btn { text-align: left; padding: 12px; border-radius: 12px; min-height: 52px; }
+  .diff-row { flex-direction: column; gap: 8px; }
+  .btn-start {
+    width: 100%;
+    min-height: 50px;
+    border-radius: 14px;
+    font-size: 0.95rem;
+    letter-spacing: 0.1em;
+    box-shadow: 0 6px 24px rgba(212, 168, 75, 0.22);
+  }
+  .camp-subtabs {
+    gap: 6px;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    padding: 4px 0 10px;
+    background: linear-gradient(180deg, rgba(12,10,16,0.98), rgba(12,10,16,0.9));
+  }
+  .camp-subtab { padding: 10px 12px; min-height: 42px; font-size: 0.7rem; }
+  .camp-grid.blessing-grid,
+  .camp-grid.well-grid,
+  .camp-grid.shard-shop-grid,
+  .camp-grid.mark-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px;
+  }
+  .settings-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .chk-set {
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(20, 16, 28, 0.65);
+    border: 1px solid rgba(58, 47, 74, 0.55);
+  }
+  .settings-label input[type="range"] { width: 100%; }
+  .overlay {
+    padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
+    align-items: flex-end;
+  }
+  .overlay-panel {
+    width: 100%;
+    max-width: 100%;
+    max-height: min(92dvh, 900px);
+    border-radius: 18px 18px 12px 12px;
+    padding: 1rem 0.95rem;
+  }
+  .levelup-panel, .pause-panel, .ability-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .ability-panel .upgrade-grid.ability-full-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+  .pause-actions button { min-height: 48px; border-radius: 12px; }
+  .menu-foot { font-size: 0.62rem; flex-wrap: wrap; justify-content: center; gap: 6px 12px; }
+  .foot-desk { display: none; }
+  .foot-mob { display: inline; color: var(--gold); opacity: 0.9; }
+}
+.foot-mob { display: none; }
+
+@media (max-width: 400px) {
+  .class-grid, .class-grid-dlc {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  body.run-portrait .virtual-joystick.vj-float {
+    width: 118px;
+    height: 118px;
+    margin: -59px 0 0 -59px;
+  }
+  body.run-portrait .vj-stick {
+    width: 44px; height: 44px; margin: -22px 0 0 -22px;
+  }
+}
+
+/* Landscape phone — compact, stick still floating */
+@media (max-height: 500px) and (orientation: landscape) {
+  body.run-portrait #status-panel,
+  body:not(.run-portrait) #status-panel,
+  #ability-panel { display: none !important; }
+  #game { max-height: calc(100dvh - 56px); }
+  .virtual-joystick.vj-float {
+    width: 104px; height: 104px; margin: -52px 0 0 -52px;
+  }
+  .vj-stick {
+    width: 40px; height: 40px; margin: -20px 0 0 -20px;
+  }
+}
+
+/* Run tab: no quick hero strip */
+.zone-run-hero,
+#run-hero-strip {
+  display: none !important;
+}
+
+/* Mobile play tab: hide hero stat blurb / heavy detail */
+@media (max-width: 760px), ((max-width: 900px) and (orientation: portrait)) {
+  #tab-run .run-detail .detail-blurb,
+  #tab-run .run-detail .detail-weapon,
+  #tab-run .run-detail .detail-previews,
+  #tab-run .run-detail .run-meta-pills {
+    display: none !important;
+  }
+  #tab-run .run-detail {
+    gap: 8px;
+    padding: 12px;
+  }
+  #tab-run .run-detail h2 {
+    font-size: 1rem;
+    text-align: left;
+  }
+  #tab-run .run-hero-summary .diff-hint {
+    font-size: 0.72rem;
+  }
+  #tab-run .detail-picks {
+    font-size: 0.72rem;
+  }
+  #tab-run .detail-picks span {
+    display: block;
+    padding: 4px 0;
   }
 }

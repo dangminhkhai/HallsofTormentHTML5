@@ -7,9 +7,11 @@
 (() => {
   "use strict";
 
-  // ─── Constants ───────────────────────────────────────────
-  const W = 1280;
-  const H = 720;
+  // ─── Viewport (landscape 16:9 · portrait mobile 9:16) ───
+  let W = 1280;
+  let H = 720;
+  const VIEW_LANDSCAPE = { w: 1280, h: 720 };
+  const VIEW_PORTRAIT = { w: 720, h: 1280 };
   const MAP_W = 2200;
   const MAP_H = 1400;
   const DATA = window.HOT_DATA;
@@ -89,6 +91,61 @@
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
   const $ = (id) => document.getElementById(id);
+
+  function isPortraitMobileLayout() {
+    try {
+      const touch =
+        ("ontouchstart" in window) ||
+        (navigator.maxTouchPoints > 0) ||
+        (window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+      const portrait =
+        window.innerHeight >= window.innerWidth * 1.05 ||
+        (window.matchMedia && window.matchMedia("(orientation: portrait)").matches);
+      return !!(touch && portrait) || !!(portrait && window.innerWidth <= 900);
+    } catch (_) {
+      return window.innerHeight > window.innerWidth;
+    }
+  }
+
+  /** Sync canvas internal resolution + body class for mobile portrait 9:16 */
+  function applyRunViewport() {
+    const portrait = isPortraitMobileLayout();
+    document.body.classList.toggle("run-portrait", portrait);
+    document.documentElement.classList.toggle("run-portrait", portrait);
+    if (el && el.gameWrap) el.gameWrap.classList.toggle("run-portrait", portrait);
+    const next = portrait ? VIEW_PORTRAIT : VIEW_LANDSCAPE;
+    if (W === next.w && H === next.h && canvas && canvas.width === next.w) return;
+    W = next.w;
+    H = next.h;
+    if (canvas) {
+      canvas.width = W;
+      canvas.height = H;
+      canvas.setAttribute("width", String(W));
+      canvas.setAttribute("height", String(H));
+    }
+    // camera may not exist yet at boot — safe optional recenter
+    try {
+      if (camera && player) {
+        camera.x = Math.max(0, Math.min(MAP_W - W, player.x - W / 2));
+        camera.y = Math.max(0, Math.min(MAP_H - H, player.y - H / 2));
+      }
+    } catch (_) { /* ignore */ }
+  }
+  // canvas size now; full class sync after el/camera ready (see end of init)
+  if (canvas) {
+    canvas.width = W;
+    canvas.height = H;
+  }
+  window.addEventListener("resize", () => {
+    applyRunViewport();
+    if (typeof updateMobileControlsVisibility === "function") updateMobileControlsVisibility();
+  });
+  window.addEventListener("orientationchange", () => {
+    setTimeout(() => {
+      applyRunViewport();
+      if (typeof updateMobileControlsVisibility === "function") updateMobileControlsVisibility();
+    }, 120);
+  });
 
   const el = {
     menu: $("menu"),
@@ -2085,6 +2142,7 @@
       el.pause.classList.remove("hidden");
       if (typeof syncSettingsUI === "function") syncSettingsUI();
     }
+    if (typeof updateMobileControlsVisibility === "function") updateMobileControlsVisibility();
     if (name === "end") {
       el.gameWrap.classList.remove("hidden");
       el.end.classList.remove("hidden");
@@ -2098,6 +2156,7 @@
   function startGame(classId, hallId) {
     selectedClass = classId;
     playMode = pendingMode === "torment" ? "torment" : "hall";
+    applyRunViewport();
 
     // Torment: random hall; Hall mode: player pick
     if (playMode === "torment") {
@@ -4127,7 +4186,13 @@
     const modeTor = document.getElementById("mode-btn-torment");
     if (modeHall) modeHall.classList.toggle("selected", !isTorment);
     if (modeTor) modeTor.classList.toggle("selected", isTorment);
-    if (zoneHalls) zoneHalls.classList.toggle("mode-disabled", isTorment);
+    // Torment = random hall — hide hall picker entirely (PC + mobile)
+    if (zoneHalls) {
+      zoneHalls.classList.toggle("hidden", isTorment);
+      zoneHalls.classList.remove("mode-disabled");
+    }
+    const hallArt = document.getElementById("detail-hall-art");
+    if (hallArt) hallArt.classList.toggle("hidden", isTorment);
     if (agonyBlock) agonyBlock.classList.toggle("hidden", isTorment);
     if (tlBlock) tlBlock.classList.toggle("hidden", !isTorment);
     if (artBlock) artBlock.classList.toggle("hidden", !isTorment);
@@ -4220,6 +4285,7 @@
     pendingMode = mode === "torment" ? "torment" : "hall";
     if (pendingMode === "torment") {
       pendingAgony = false;
+      detailFocus = "hero";
       ensureDurationForMode();
       clampPendingTormentLevel();
     } else {
@@ -4228,6 +4294,7 @@
     buildDurationPicks();
     buildTormentLevelPicks();
     updateDiffUI();
+    if (typeof refreshDetailPanel === "function") refreshDetailPanel();
     saveMeta();
     sfx("ui");
   }
@@ -4476,6 +4543,7 @@
       ["set-sfx", "pause-set-sfx", !!settings.sfx],
       ["set-shake", "pause-set-shake", settings.shake !== false],
       ["set-gamepad", "pause-set-gamepad", settings.gamepad !== false],
+      ["set-joystick", "pause-set-joystick", settings.joystick !== false],
     ];
     for (const [a, b, val] of checks) {
       const elA = document.getElementById(a);
@@ -4483,6 +4551,7 @@
       if (elA) elA.checked = val;
       if (elB) elB.checked = val;
     }
+    if (typeof updateMobileControlsVisibility === "function") updateMobileControlsVisibility();
   }
 
   function wireSettingsUI() {
@@ -4504,6 +4573,7 @@
         if (key === "sfx") settings.sfx = !!elChk.checked;
         else if (key === "shake") settings.shake = !!elChk.checked;
         else if (key === "gamepad") settings.gamepad = !!elChk.checked;
+        else if (key === "joystick") settings.joystick = !!elChk.checked;
         saveSettings();
         syncSettingsUI();
         if (playUi) sfx("ui");
@@ -4517,6 +4587,8 @@
     bindCheck("pause-set-shake", "shake", false);
     bindCheck("set-gamepad", "gamepad", false);
     bindCheck("pause-set-gamepad", "gamepad", false);
+    bindCheck("set-joystick", "joystick", true);
+    bindCheck("pause-set-joystick", "joystick", true);
 
     const clearBtn = document.getElementById("btn-clear-meta");
     if (clearBtn && !clearBtn.dataset.wired) {
@@ -6656,15 +6728,42 @@
       player.hp = Math.min(player.maxHp, player.hp + player.regen * dt);
     }
 
-    // movement (keyboard + gamepad stick)
+    // movement (keyboard + gamepad stick + virtual joystick)
+    // Analog sticks keep magnitude (0..1) for fine control; digital keys are full strength.
     let mx = 0;
     let my = 0;
-    if (keys["w"] || keys["arrowup"]) my -= 1;
-    if (keys["s"] || keys["arrowdown"]) my += 1;
-    if (keys["a"] || keys["arrowleft"]) mx -= 1;
-    if (keys["d"] || keys["arrowright"]) mx += 1;
-    if (player._gpMx) mx += player._gpMx;
-    if (player._gpMy) my += player._gpMy;
+    const joyX = player._joyMx || 0;
+    const joyY = player._joyMy || 0;
+    const gpX = player._gpMx || 0;
+    const gpY = player._gpMy || 0;
+    const hasJoy = Math.abs(joyX) > 0.001 || Math.abs(joyY) > 0.001;
+    const hasGp = Math.abs(gpX) > 0.001 || Math.abs(gpY) > 0.001;
+    if (hasJoy) {
+      // Mobile virtual stick wins — pure analog, no keyboard blend
+      mx = joyX;
+      my = joyY;
+    } else {
+      let digX = 0;
+      let digY = 0;
+      if (keys["w"] || keys["arrowup"]) digY -= 1;
+      if (keys["s"] || keys["arrowdown"]) digY += 1;
+      if (keys["a"] || keys["arrowleft"]) digX -= 1;
+      if (keys["d"] || keys["arrowright"]) digX += 1;
+      if (digX || digY) {
+        const dLen = Math.hypot(digX, digY) || 1;
+        mx += digX / dLen;
+        my += digY / dLen;
+      }
+      if (hasGp) {
+        mx += gpX;
+        my += gpY;
+      }
+      const vLen = Math.hypot(mx, my);
+      if (vLen > 1) {
+        mx /= vLen;
+        my /= vLen;
+      }
+    }
     if (player.chillTimer > 0) player.chillTimer -= dt;
     const chillMul = player.chillTimer > 0 ? 0.55 : 1;
     // Pace Setter / Guiding Star / War Chief force
@@ -6680,19 +6779,18 @@
     } else player._visionRangeMul = 1;
 
     const moveMul = (player.skillActive > 0 && player.skillId === "ringblades" ? 1.15 : 1) * chillMul * itemMs;
-    player.moving = !!(mx || my);
-    if (mx || my) {
-      const len = Math.hypot(mx, my) || 1;
-      mx /= len;
-      my /= len;
+    const moveMag = Math.hypot(mx, my);
+    player.moving = moveMag > 0.02;
+    if (player.moving) {
+      // Keep analog magnitude (0..1) — do NOT re-normalize to full speed
       // Facing hysteresis: chỉ đổi khi trục X rõ
-      if (Math.abs(mx) > 0.25) player.facing = mx > 0 ? 1 : -1;
+      if (Math.abs(mx) > 0.22) player.facing = mx > 0 ? 1 : -1;
       const step = player.speed * moveMul * dt;
       player._lastMx = mx * step;
       player._lastMy = my * step;
       player.x = clamp(player.x + player._lastMx, player.r + 8, MAP_W - player.r - 8);
       player.y = clamp(player.y + player._lastMy, player.r + 8, MAP_H - player.r - 8);
-      player.bob += dt * 10;
+      player.bob += dt * (8 + moveMag * 4);
     } else {
       player._lastMx = 0;
       player._lastMy = 0;
@@ -10483,6 +10581,286 @@
     keys[e.key.toLowerCase()] = false;
   });
 
+  // ─── Mobile: floating virtual stick (spawn at touch) — tuned for accuracy ──
+  // maxR ≈ 78% of base radius · small radial deadzone · dynamic base follow · analog mag
+  const joyState = {
+    active: false,
+    id: null,
+    mx: 0,
+    my: 0,
+    cx: 0,
+    cy: 0,
+    maxR: 48,
+    half: 60,
+    // radial deadzone as fraction of maxR (small → more responsive micro-moves)
+    deadFrac: 0.11,
+    // outer travel before base follows finger (keeps long swipes accurate)
+    follow: true,
+  };
+
+  function isTouchishDevice() {
+    try {
+      return (
+        ("ontouchstart" in window) ||
+        (navigator.maxTouchPoints > 0) ||
+        (window.matchMedia && window.matchMedia("(pointer: coarse)").matches)
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function measureJoystickHalf() {
+    const zone = document.getElementById("virtual-joystick");
+    if (zone) {
+      // Force layout if idle/hidden had 0 size — temporarily measure via CSS width
+      const r = zone.getBoundingClientRect();
+      const w = r.width || 0;
+      if (w > 20) return w * 0.5;
+      const cs = window.getComputedStyle(zone);
+      const cw = parseFloat(cs.width) || 0;
+      if (cw > 20) return cw * 0.5;
+    }
+    // CSS fallbacks: 128 / 118 / 104
+    if (window.matchMedia && window.matchMedia("(max-height: 500px) and (orientation: landscape)").matches) {
+      return 52;
+    }
+    if (window.matchMedia && window.matchMedia("(max-width: 400px)").matches) {
+      return 59;
+    }
+    return 64;
+  }
+
+  function syncJoystickGeometry() {
+    const half = measureJoystickHalf();
+    joyState.half = half;
+    // Travel radius: almost to the ring edge for clearer full-speed feel
+    joyState.maxR = Math.max(28, half * 0.78);
+  }
+
+  function clearJoyInput() {
+    joyState.mx = 0;
+    joyState.my = 0;
+    if (player) {
+      player._joyMx = 0;
+      player._joyMy = 0;
+    }
+  }
+
+  function resetJoystickVisual() {
+    const zone = document.getElementById("virtual-joystick");
+    const st = document.getElementById("vj-stick");
+    if (zone) {
+      zone.classList.remove("active");
+      zone.classList.add("is-idle");
+      zone.setAttribute("aria-hidden", "true");
+    }
+    if (st) st.style.transform = "translate3d(0px, 0px, 0)";
+  }
+
+  function placeJoystickAt(clientX, clientY) {
+    const zone = document.getElementById("virtual-joystick");
+    if (!zone) return;
+    syncJoystickGeometry();
+    const half = joyState.half;
+    const safeTop = half + 44; // below pause / notch
+    const safeBot = half + 12;
+    const x = clamp(clientX, half + 4, window.innerWidth - half - 4);
+    const y = clamp(clientY, safeTop, window.innerHeight - safeBot);
+    zone.style.left = x + "px";
+    zone.style.top = y + "px";
+    zone.classList.remove("is-idle");
+    zone.classList.add("active");
+    zone.setAttribute("aria-hidden", "false");
+    joyState.cx = x;
+    joyState.cy = y;
+  }
+
+  function updateMobileControlsVisibility() {
+    const root = document.getElementById("mobile-controls");
+    if (!root) return;
+    applyRunViewport();
+    const inGame =
+      state === "playing" || state === "levelup" || state === "ability" || state === "well";
+    const joyOn = settings.joystick !== false;
+    // Hiển thị chrome mobile khi đang run + bật cần xoay (hoặc màn dọc)
+    const show = inGame && (joyOn || document.body.classList.contains("run-portrait"));
+    root.classList.toggle("hidden", !show);
+    root.setAttribute("aria-hidden", show ? "false" : "true");
+    root.classList.toggle("joy-enabled", joyOn && state === "playing");
+    if (!show || !joyOn || state !== "playing") {
+      joyState.active = false;
+      joyState.id = null;
+      clearJoyInput();
+      resetJoystickVisual();
+    }
+  }
+
+  /**
+   * Map finger offset → unit vector (-1..1) with proper radial deadzone.
+   * Dynamic base follow: when finger exceeds maxR, center slides toward finger
+   * so direction stays accurate on long swipes (standard mobile virtual pad).
+   */
+  function applyJoyVector(clientX, clientY) {
+    let dx = clientX - joyState.cx;
+    let dy = clientY - joyState.cy;
+    let len = Math.hypot(dx, dy);
+    const maxR = joyState.maxR || 48;
+
+    // Dynamic recentering past outer ring
+    if (joyState.follow && len > maxR && len > 0.001) {
+      const over = len - maxR;
+      const ux = dx / len;
+      const uy = dy / len;
+      joyState.cx += ux * over;
+      joyState.cy += uy * over;
+      // Keep base on-screen
+      const half = joyState.half || 60;
+      joyState.cx = clamp(joyState.cx, half + 4, window.innerWidth - half - 4);
+      joyState.cy = clamp(joyState.cy, half + 40, window.innerHeight - half - 12);
+      const zone = document.getElementById("virtual-joystick");
+      if (zone) {
+        zone.style.left = joyState.cx + "px";
+        zone.style.top = joyState.cy + "px";
+      }
+      dx = clientX - joyState.cx;
+      dy = clientY - joyState.cy;
+      len = Math.hypot(dx, dy);
+    }
+
+    // Clamp visual/input to maxR
+    let vdx = dx;
+    let vdy = dy;
+    if (len > maxR && len > 0.001) {
+      vdx = (dx / len) * maxR;
+      vdy = (dy / len) * maxR;
+      len = maxR;
+    }
+
+    // Radial deadzone remap: 0 at dead, 1 at maxR (direction from unit vector)
+    const dead = Math.max(3, maxR * (joyState.deadFrac || 0.11));
+    let nx = 0;
+    let ny = 0;
+    if (len > dead) {
+      const mag = Math.min(1, (len - dead) / (maxR - dead));
+      // Slight ease-in for micro-precision near center (still linear-ish)
+      const smooth = mag * mag * (3 - 2 * mag); // smoothstep
+      // Blend 70% linear + 30% smoothstep → accurate without mushy center
+      const out = mag * 0.7 + smooth * 0.3;
+      const inv = 1 / len;
+      nx = dx * inv * out;
+      ny = dy * inv * out;
+    }
+
+    joyState.mx = nx;
+    joyState.my = ny;
+    if (player) {
+      player._joyMx = nx;
+      player._joyMy = ny;
+    }
+    const st = document.getElementById("vj-stick");
+    if (st) st.style.transform = `translate3d(${vdx}px, ${vdy}px, 0)`;
+  }
+
+  function wireVirtualJoystick() {
+    const pad = document.getElementById("touch-move-pad");
+    if (!pad || pad.dataset.wired) return;
+    pad.dataset.wired = "1";
+
+    function isPauseTarget(t) {
+      if (!t || !t.closest) return false;
+      return !!t.closest("#btn-mobile-pause, .mobile-pause-btn");
+    }
+
+    function onDown(e) {
+      if (settings.joystick === false) return;
+      if (state !== "playing") return;
+      if (isPauseTarget(e.target)) return;
+      // Only primary mouse button if mouse; always accept touch/pen
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      // One finger only
+      if (joyState.active) return;
+      e.preventDefault();
+      joyState.active = true;
+      joyState.id = e.pointerId != null ? e.pointerId : "touch";
+      placeJoystickAt(e.clientX, e.clientY);
+      try {
+        if (e.pointerId != null && pad.setPointerCapture) pad.setPointerCapture(e.pointerId);
+      } catch (_) { /* ignore */ }
+      // Start neutral — first move frames set direction (avoids accidental micro-nudge)
+      clearJoyInput();
+      const st = document.getElementById("vj-stick");
+      if (st) st.style.transform = "translate3d(0px, 0px, 0)";
+    }
+    function onMove(e) {
+      if (!joyState.active) return;
+      if (joyState.id != null && e.pointerId != null && e.pointerId !== joyState.id) return;
+      e.preventDefault();
+      applyJoyVector(e.clientX, e.clientY);
+    }
+    function onUp(e) {
+      if (!joyState.active) return;
+      if (joyState.id != null && e.pointerId != null && e.pointerId !== joyState.id) return;
+      joyState.active = false;
+      joyState.id = null;
+      clearJoyInput();
+      resetJoystickVisual();
+      try {
+        if (e.pointerId != null && pad.releasePointerCapture && pad.hasPointerCapture?.(e.pointerId)) {
+          pad.releasePointerCapture(e.pointerId);
+        }
+      } catch (_) { /* ignore */ }
+    }
+
+    pad.addEventListener("pointerdown", onDown, { passive: false });
+    pad.addEventListener("pointermove", onMove, { passive: false });
+    pad.addEventListener("pointerup", onUp, { passive: false });
+    pad.addEventListener("pointercancel", onUp, { passive: false });
+    pad.addEventListener("lostpointercapture", onUp, { passive: false });
+
+    // Recalc geometry on rotate / resize
+    window.addEventListener("resize", () => {
+      if (joyState.active) syncJoystickGeometry();
+    }, { passive: true });
+    window.addEventListener("orientationchange", () => {
+      setTimeout(syncJoystickGeometry, 80);
+    }, { passive: true });
+
+    const pauseBtn = document.getElementById("btn-mobile-pause");
+    if (pauseBtn && !pauseBtn.dataset.wired) {
+      pauseBtn.dataset.wired = "1";
+      pauseBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (state === "playing") {
+          state = "pause";
+          sfx("pause");
+          fillBuildSummary();
+          showScreen("pause");
+        } else if (state === "pause") {
+          state = "playing";
+          sfx("ui");
+          showScreen("game");
+          lastTs = performance.now();
+        }
+      });
+    }
+    syncJoystickGeometry();
+    updateMobileControlsVisibility();
+  }
+
+  // Prevent browser scroll when interacting with game surface
+  (function wireTouchGameGuard() {
+    const wrap = document.getElementById("game-wrap");
+    if (!wrap || wrap.dataset.touchGuard) return;
+    wrap.dataset.touchGuard = "1";
+    wrap.style.touchAction = "none";
+    const block = (e) => {
+      if (state === "playing") e.preventDefault();
+    };
+    wrap.addEventListener("touchmove", block, { passive: false });
+  })();
+
   let pendingHeroId = null;
   let pendingHallId = null;
   let detailFocus = "hero"; // which selection last clicked — drives detail text
@@ -10517,7 +10895,7 @@
   }
 
   function startBlockReason() {
-    if (!pendingHeroId) return "Cần chọn Anh hùng (dải nhanh hoặc tab Anh hùng)";
+    if (!pendingHeroId) return "Cần chọn Anh hùng (tab Anh hùng · Chỉ số)";
     if (pendingMode !== "torment" && !pendingHallId) return "Cần chọn Sảnh";
     if (pendingMode === "torment" && !isTormentLevelUnlocked(pendingTormentLevel || 1)) {
       return "Cấp Khổ hình đang khóa";
@@ -10583,45 +10961,11 @@
       pills.innerHTML = bits.join("");
     }
     // Sync strip selection
-    document.querySelectorAll(".run-hero-chip").forEach((b) => {
-      b.classList.toggle("selected", b.dataset.class === pendingHeroId);
-    });
   }
 
+  /** Quick hero strip removed (PC + mobile) — chọn hero ở tab Anh hùng */
   function buildRunHeroStrip() {
-    const strip = document.getElementById("run-hero-strip");
-    if (!strip) return;
-    strip.innerHTML = "";
-    const order = DATA.HERO_ORDER || Object.keys(CLASSES);
-    for (const id of order) {
-      const h = CLASSES[id];
-      if (!h) continue;
-      const dt = heroDmgMeta(heroDmgType(h));
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "run-hero-chip" + (pendingHeroId === id ? " selected" : "");
-      btn.dataset.class = id;
-      btn.title = `${h.name} · ${dt.label}`;
-      const cv = document.createElement("canvas");
-      cv.width = 40;
-      cv.height = 40;
-      if (typeof paintPortrait === "function") paintPortrait(cv, id, 40);
-      else if (typeof window.paintMenuPortrait === "function") window.paintMenuPortrait(cv, id, 40);
-      const nm = document.createElement("span");
-      nm.className = "rh-name";
-      nm.textContent = h.name.split(" ")[0];
-      const tp = document.createElement("span");
-      tp.className = "rh-type";
-      tp.style.color = dt.color;
-      tp.textContent = dt.label || "";
-      btn.appendChild(cv);
-      btn.appendChild(nm);
-      btn.appendChild(tp);
-      btn.addEventListener("click", () => {
-        selectHero(id);
-      });
-      strip.appendChild(btn);
-    }
+    /* no-op */
   }
 
   /** Snapshot combat-facing stats for menu compare */
@@ -10703,27 +11047,27 @@
     }
     const b = prev.base;
     const f = prev.full;
-    const VS = (window.HOT_VI && window.HOT_VI.stats) || {};
+    // Compact labels so 2-col grid never piles long VI names onto numbers
     const specs = [
-      { key: "maxHp", name: VS.maxHp || "Máu tối đa", kind: "int" },
-      { key: "damage", name: VS.damage || "Sát thương", kind: "num" },
-      { key: "asp", name: VS.asp || "Tốc độ đánh (lần/giây)", kind: "asp" },
-      { key: "speed", name: VS.speed || "Tốc độ di chuyển", kind: "int" },
-      { key: "range", name: VS.range || "Tầm đánh", kind: "int" },
-      { key: "defense", name: VS.defense || "Phòng thủ", kind: "int" },
-      { key: "block", name: VS.block || "Sức chắn", kind: "int" },
-      { key: "regen", name: VS.regen || "Hồi máu (mỗi giây)", kind: "regen" },
-      { key: "crit", name: VS.crit || "Tỷ lệ chí mạng (%)", kind: "pct" },
-      { key: "critB", name: VS.critB || "Sát thương chí mạng (%)", kind: "pct" },
-      { key: "multi", name: VS.multi || "Đa đòn", kind: "multi" },
-      { key: "force", name: VS.force || "Lực đẩy", kind: "force" },
-      { key: "pickup", name: VS.pickup || "Tầm nhặt đồ", kind: "int" },
-      { key: "abDmg", name: VS.abDmg || "Sát thương khả năng (%)", kind: "pct" },
-      { key: "abCd", name: VS.abCd || "Hồi chiêu khả năng (%)", kind: "lower" },
-      { key: "xpGain", name: VS.xpGain || "Nhận kinh nghiệm (%)", kind: "pct" },
-      { key: "goldFind", name: VS.goldFind || "Tìm vàng (%)", kind: "pct" },
-      { key: "effect", name: VS.effect || "Tỷ lệ hiệu ứng (%)", kind: "pct" },
-      { key: "thorns", name: VS.thorns || "Gai phản", kind: "int" },
+      { key: "maxHp", name: "Máu", kind: "int" },
+      { key: "damage", name: "Sát thương", kind: "num" },
+      { key: "asp", name: "Tốc đánh", kind: "asp" },
+      { key: "speed", name: "Di chuyển", kind: "int" },
+      { key: "range", name: "Tầm đánh", kind: "int" },
+      { key: "defense", name: "Phòng thủ", kind: "int" },
+      { key: "block", name: "Sức chắn", kind: "int" },
+      { key: "regen", name: "Hồi máu", kind: "regen" },
+      { key: "crit", name: "Chí mạng %", kind: "pct" },
+      { key: "critB", name: "ST chí mạng %", kind: "pct" },
+      { key: "multi", name: "Đa đòn", kind: "multi" },
+      { key: "force", name: "Lực đẩy", kind: "force" },
+      { key: "pickup", name: "Tầm nhặt", kind: "int" },
+      { key: "abDmg", name: "ST khả năng %", kind: "pct" },
+      { key: "abCd", name: "Hồi chiêu KN %", kind: "lower" },
+      { key: "xpGain", name: "XP %", kind: "pct" },
+      { key: "goldFind", name: "Vàng %", kind: "pct" },
+      { key: "effect", name: "Hiệu ứng %", kind: "pct" },
+      { key: "thorns", name: "Gai phản", kind: "int" },
     ];
     rows.innerHTML = specs.map((sp) => {
       const bv = b[sp.key];
@@ -10774,9 +11118,16 @@
     const detailCv = document.getElementById("detail-portrait");
     const hallArt = document.getElementById("detail-hall-art");
 
-    // Run sidebar previews
+    // Run sidebar previews (no hall art in Torment — hall is random at start)
     if (detailCv && pendingHeroId) paintPortrait(detailCv, pendingHeroId, 100);
-    if (hallArt && pendingHallId) paintHallArt(hallArt, pendingHallId, 140, 88);
+    if (hallArt) {
+      if (pendingMode === "torment") {
+        hallArt.classList.add("hidden");
+      } else {
+        hallArt.classList.remove("hidden");
+        if (pendingHallId) paintHallArt(hallArt, pendingHallId, 140, 88);
+      }
+    }
 
     // Run sidebar text — prefer hall when focusing hall, else hero summary
     if (detailFocus === "hall" && pendingHallId && HALLS[pendingHallId] && pendingMode !== "torment") {
@@ -10830,7 +11181,7 @@
     const blurb = document.getElementById("hero-tab-blurb");
     const portrait = document.getElementById("hero-tab-portrait");
     if (!pendingHeroId || !CLASSES[pendingHeroId]) {
-      if (name) name.textContent = "Chọn Hero";
+      if (name) name.textContent = "Chọn Anh hùng";
       if (weapon) weapon.textContent = "—";
       if (dmgEl) dmgEl.textContent = "—";
       if (blurb) blurb.innerHTML = "<li>Chọn hero trong roster bên trái</li>";
@@ -10840,7 +11191,7 @@
     const dt = heroDmgMeta(heroDmgType(h));
     const elem = h.dmgElement || heroDmgType(h);
     if (portrait) paintPortrait(portrait, pendingHeroId, 120);
-    if (name) name.textContent = h.name;
+    if (name) name.textContent = h.name || "—";
     if (weapon) weapon.textContent = h.weapon || "—";
     if (dmgEl) {
       dmgEl.innerHTML =
@@ -10851,10 +11202,37 @@
           : "");
     }
     if (blurb) {
-      const lines = (h.blurb || []).filter((t) => !/^Skill:/i.test(String(t).trim()));
-      if (h.group === "boglands") lines.push("DLC · Boglands");
-      blurb.innerHTML = lines.map((t) => `<li>${t}</li>`).join("");
+      // Playstyle lines only (drop raw "Skill: …" — skill rendered as dedicated block below)
+      const lines = (h.blurb || [])
+        .map((t) => String(t).trim())
+        .filter((t) => t && !/^Skill:/i.test(t));
+      if (h.group === "boglands" && !lines.some((t) => /boglands/i.test(t))) {
+        lines.push("DLC · Boglands");
+      }
+      const parts = lines.map((t) => `<li>${escapeHtmlLite(t)}</li>`);
+      const sk = h.skill;
+      if (sk && (sk.name || sk.desc || sk.id)) {
+        const skName = sk.name || sk.id || "—";
+        const skDesc = sk.desc ? String(sk.desc).trim() : "";
+        const cd = sk.cooldown != null ? ` · CD ${sk.cooldown}s` : "";
+        parts.push(
+          `<li class="hero-tab-skill">` +
+          `<span class="skill-label">Khả năng</span>` +
+          `<strong>${escapeHtmlLite(skName)}</strong>${escapeHtmlLite(cd)}` +
+          (skDesc ? `<span class="skill-desc">${escapeHtmlLite(skDesc)}</span>` : "") +
+          `</li>`
+        );
+      }
+      blurb.innerHTML = parts.join("");
     }
+  }
+
+  function escapeHtmlLite(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
   function selectHero(id) {
@@ -11174,6 +11552,9 @@
     if (startBtn) startBtn.onclick = () => tryStartGame();
   }
   buildMenu();
+  applyRunViewport();
+  wireVirtualJoystick();
+  updateMobileControlsVisibility();
 
   $("btn-resume").addEventListener("click", () => {
     state = "playing";

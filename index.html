@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Halls of Torment — Bản HTML5</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -40,14 +40,6 @@
                     <span>Cấp khóa · thắng mới mở tiếp · 5/10/15 phút · sảnh ngẫu nhiên</span>
                   </button>
                 </div>
-              </section>
-
-              <section class="zone zone-run-hero" aria-label="Anh hùng nhanh">
-                <div class="roster-label row-between">
-                  <span>Anh hùng · chọn nhanh</span>
-                  <button type="button" class="link-btn" id="btn-run-to-hero">Chỉ số chi tiết →</button>
-                </div>
-                <div id="run-hero-strip" class="run-hero-strip"></div>
               </section>
 
               <section class="zone zone-halls" id="zone-halls" aria-label="Chọn màn chơi">
@@ -109,8 +101,8 @@
               <ul id="detail-blurb" class="detail-blurb"></ul>
               <div class="run-meta-pills" id="run-meta-pills"></div>
               <div class="run-hero-summary" id="run-hero-summary">
-                <p class="diff-hint">Chọn anh hùng trên dải nhanh hoặc tab <strong>Anh hùng · Chỉ số</strong>.</p>
-                <button type="button" class="camp-btn" id="btn-goto-hero">Chỉ số chi tiết</button>
+                <p class="diff-hint">Chọn anh hùng ở tab <strong>Anh hùng · Chỉ số</strong>.</p>
+                <button type="button" class="camp-btn" id="btn-goto-hero">Chọn anh hùng</button>
               </div>
               <div class="detail-picks">
                 <span id="pick-mode-label">Chế độ: Sảnh</span>
@@ -159,10 +151,11 @@
                 <div class="hero-stat-head hero-stat-head-lg">
                   <span>Chỉ số</span>
                   <span class="col-base">Cơ bản</span>
-                  <span class="col-final">Có đồ / Phước</span>
-                  <span class="col-pad"></span>
-                  <span class="col-base">Cơ bản</span>
-                  <span class="col-final">Có đồ / Phước</span>
+                  <span class="col-final">Có đồ</span>
+                  <span class="col-pad" aria-hidden="true"></span>
+                  <span class="col-dup">Chỉ số</span>
+                  <span class="col-base col-dup">Cơ bản</span>
+                  <span class="col-final col-dup">Có đồ</span>
                 </div>
                 <div id="hero-stat-rows" class="hero-stat-rows"></div>
                 <p id="hero-stat-meta" class="hero-stat-meta"></p>
@@ -216,7 +209,7 @@
 
             <section class="camp-section hidden" data-camp-panel="settings" aria-label="Cài đặt">
               <div class="roster-label">Cài đặt</div>
-              <p class="camp-hint">Âm thanh · rung màn · tay cầm · xóa dữ liệu</p>
+              <p class="camp-hint">Âm thanh · rung màn · tay cầm · cần xoay mobile · xóa dữ liệu</p>
               <div class="settings-row">
                 <label class="settings-label">Âm lượng <span id="vol-label">55%</span>
                   <input type="range" id="set-vol" min="0" max="100" value="55" />
@@ -224,6 +217,7 @@
                 <label class="chk-set"><input type="checkbox" id="set-sfx" checked /> Hiệu ứng âm thanh</label>
                 <label class="chk-set"><input type="checkbox" id="set-shake" checked /> Rung màn hình</label>
                 <label class="chk-set"><input type="checkbox" id="set-gamepad" checked /> Tay cầm</label>
+                <label class="chk-set"><input type="checkbox" id="set-joystick" checked /> Cần xoay (mobile)</label>
                 <button type="button" id="btn-clear-meta" class="camp-btn secondary">Xóa toàn bộ meta</button>
               </div>
             </section>
@@ -231,9 +225,10 @@
         </div>
 
         <footer class="menu-foot">
-          <span>Di chuyển <kbd>WASD</kbd></span>
-          <span>Tạm dừng <kbd>Esc</kbd></span>
-          <span>Chơi · dải anh hùng · Trại theo mục</span>
+          <span class="foot-desk">Di chuyển <kbd>WASD</kbd></span>
+          <span class="foot-desk">Tạm dừng <kbd>Esc</kbd></span>
+          <span class="foot-mob">Cần xoay · nút Ⅱ tạm dừng</span>
+          <span>Chơi · Anh hùng · Trại</span>
         </footer>
       </div>
     </div>
@@ -356,6 +351,25 @@
           </div>
         </div>
       </div>
+
+      <!-- Mobile portrait: floating stick (spawn at touch) + pause -->
+      <div id="mobile-controls" class="mobile-controls hidden" aria-hidden="true">
+        <div class="m-top-chrome" aria-hidden="true">
+          <div class="m-top-glass"></div>
+        </div>
+        <button type="button" id="btn-mobile-pause" class="mobile-pause-btn" aria-label="Tạm dừng" title="Tạm dừng">
+          <span class="mp-icon" aria-hidden="true"></span>
+        </button>
+        <!-- full-screen pad: chạm bất kỳ đâu (trừ nút) để hiện cần xoay -->
+        <div id="touch-move-pad" class="touch-move-pad" aria-label="Chạm để di chuyển"></div>
+        <div id="virtual-joystick" class="virtual-joystick vj-float is-idle" aria-hidden="true">
+          <div class="vj-base">
+            <div class="vj-ring" aria-hidden="true"></div>
+            <div class="vj-cross" aria-hidden="true"></div>
+            <div class="vj-stick" id="vj-stick"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="levelup" class="overlay hidden">
@@ -392,6 +406,7 @@
             <label class="chk-set"><input type="checkbox" id="pause-set-sfx" checked /> Hiệu ứng âm thanh</label>
             <label class="chk-set"><input type="checkbox" id="pause-set-shake" checked /> Rung màn hình</label>
             <label class="chk-set"><input type="checkbox" id="pause-set-gamepad" checked /> Tay cầm</label>
+            <label class="chk-set"><input type="checkbox" id="pause-set-joystick" checked /> Cần xoay (mobile)</label>
           </div>
         </section>
 

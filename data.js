@@ -827,6 +827,8 @@ window.HOT_DATA = (() => {
     sfx: true,
     shake: true,
     gamepad: true,
+    /** Cần xoay ảo (mobile) — ẩn/hiện trong Cài đặt */
+    joystick: true,
   };
 
   /** Run length — Hall & Torment: 5 / 10 / 15 phút */
