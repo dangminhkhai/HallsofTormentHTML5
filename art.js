@@ -668,24 +668,23 @@ window.HOT_ART = (() => {
   }
 
   /** Soft floating combat text */
-  function drawSoftFloatingText(ctx, text, x, y, color, alpha) {
+  function drawSoftFloatingText(ctx, text, x, y, color, alpha, scale) {
     const a = alpha != null ? alpha : 1;
+    const sc = scale != null ? scale : 1;
     ctx.save();
     ctx.globalAlpha = a;
-    ctx.font = "bold 13px Segoe UI";
+    ctx.translate(x, y);
+    ctx.scale(sc, sc);
+    const fontPx = Math.round(13 * Math.min(1.6, Math.max(0.85, sc)));
+    ctx.font = `bold ${fontPx}px Segoe UI`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    // soft plate behind big numbers / keywords
-    if (text && (text.length <= 5 || /crit|crit!|!/i.test(text))) {
-      const w = Math.min(72, 10 + String(text).length * 7);
-      ctx.fillStyle = "rgba(8,6,12,0.45)";
-      roundRect(ctx, x - w / 2, y - 9, w, 16, 5);
-      ctx.fill();
-    }
+    const t = String(text || "");
+    // chỉ text + shadow mảnh — không viền / plate nền
     ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.fillText(text, x + 1, y + 1);
+    ctx.fillText(t, 1, 1);
     ctx.fillStyle = color || "#fff";
-    ctx.fillText(text, x, y);
+    ctx.fillText(t, 0, 0);
     ctx.restore();
   }
 
@@ -903,27 +902,49 @@ window.HOT_ART = (() => {
     return true;
   }
 
-  /** Soft orbit orb (ability) */
+  /** Soft orbit orb (ability) — glow + core + optional blade */
   function drawSoftOrb(ctx, x, y, r, color, shape) {
     const c = color || TOKENS.dmg.magic;
+    const rr = r || 7;
     ctx.save();
-    ctx.globalAlpha = 0.28;
-    ctx.fillStyle = c;
+    // outer aura
+    const g0 = ctx.createRadialGradient(x, y, 1, x, y, rr * 2.4);
+    g0.addColorStop(0, hexA(c, 0.45));
+    g0.addColorStop(0.55, hexA(c, 0.12));
+    g0.addColorStop(1, "transparent");
+    ctx.fillStyle = g0;
     ctx.beginPath();
-    ctx.arc(x, y, r * 1.8, 0, Math.PI * 2);
+    ctx.arc(x, y, rr * 2.4, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 1;
     if (shape === "blade") {
-      ctx.fillStyle = c;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(0.45);
+      const g = ctx.createLinearGradient(-rr * 1.8, 0, rr * 1.8, 0);
+      g.addColorStop(0, hexA(c, 0.3));
+      g.addColorStop(0.5, c);
+      g.addColorStop(1, "#ffffff");
+      ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.ellipse(x, y, r * 1.6, r * 0.55, 0.4, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, rr * 1.7, rr * 0.5, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = hexA("#fff", 0.4);
+      ctx.fillStyle = hexA("#fff", 0.5);
       ctx.beginPath();
-      ctx.ellipse(x - 1, y - 1, r * 0.7, r * 0.25, 0.4, 0, Math.PI * 2);
+      ctx.ellipse(-rr * 0.2, -rr * 0.1, rr * 0.7, rr * 0.18, 0, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
     } else {
-      softDisc(ctx, x, y, r + 1, c, shade(c, 0.35));
+      softDisc(ctx, x, y, rr + 1.5, c, shade(c, 0.4));
+      ctx.fillStyle = hexA("#fff", 0.5);
+      ctx.beginPath();
+      ctx.arc(x - rr * 0.3, y - rr * 0.35, rr * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      // soft rim
+      ctx.strokeStyle = hexA("#fff", 0.2);
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(x, y, rr + 1, 0, Math.PI * 2);
+      ctx.stroke();
     }
     ctx.restore();
     return true;

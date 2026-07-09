@@ -169,6 +169,14 @@
   let camera = { x: 0, y: 0 };
   let kills = 0;
   let gold = 0;
+  /** Vàng đã cộng vào meta.gold trong run này (bank ngay khi nhặt) */
+  let runGoldBanked = 0;
+  /** Mảnh đã cộng vào meta.shards trong run này */
+  let runShardsBanked = 0;
+  /** Hitstop (giây) — đơ combat ngắn khi crit/hit nặng */
+  let hitstop = 0;
+  /** Soft flash màn (0..1) khi chí mạng */
+  let hitFlashScreen = 0;
   let elapsed = 0;
   let slashFx = null;
   let pendingAbilityResume = "playing";
@@ -243,7 +251,11 @@
   }
 
   function sfx(name) {
-    if (window.HOT_SFX) window.HOT_SFX.play(name);
+    if (!window.HOT_SFX) return;
+    try {
+      if (typeof window.HOT_SFX.unlock === "function") window.HOT_SFX.unlock();
+      window.HOT_SFX.play(name);
+    } catch (_) { /* ignore */ }
   }
 
   function addShake(amount) {
@@ -1396,7 +1408,7 @@
       final *= 1 + Math.min(0.4, burning * 0.01);
     }
     e.hp -= final;
-    e.hitFlash = 0.12;
+    e.hitFlash = isCritish ? 0.16 : 0.12;
     if (hitOpts) applyHitEffects(e, Object.assign({ baseDmg: dmg }, hitOpts));
     onItemWeaponHit(e, final, isCritish, hitOpts);
     if (player) {
@@ -1408,28 +1420,24 @@
       }
     }
     dmg = final; // for floating text
+    const big = final >= (player ? player.damage * 1.8 : 40) || isCritish;
     floatingTexts.push({
       x: e.x + rand(-6, 6),
       y: e.y - e.r,
       text: String(Math.round(dmg)),
-      life: 0.6,
-      maxLife: 0.6,
-      color: isCritish ? "#ffe08a" : "#fff",
-      vy: -40,
+      life: isCritish ? 0.75 : 0.6,
+      maxLife: isCritish ? 0.75 : 0.6,
+      color: isCritish ? "#ff4040" : "#fff",
+      vy: isCritish ? -52 : -40,
+      scale: isCritish ? 1.45 : (big ? 1.15 : 1),
     });
     if (isCritish) {
       sfx("crit");
-      addShake(2);
-      floatingTexts.push({
-        x: e.x + rand(-4, 4),
-        y: e.y - e.r - 12,
-        text: "CHÍ MẠNG",
-        life: 0.45,
-        maxLife: 0.45,
-        color: "#ffd070",
-        vy: -50,
-      });
-    } else if (Math.random() < 0.12) {
+      // không hitstop / giật màn khi chí mạng (tránh khựng game)
+    } else if (big) {
+      sfx("hit_heavy");
+      if (Math.random() < 0.4) sfx("slash");
+    } else if (Math.random() < 0.18) {
       sfx("hit");
     }
     if (e.isBoss) updateBossBar();
@@ -1588,8 +1596,25 @@
 
   function killEnemy(e) {
     kills++;
-    if (e.isBoss) { sfx("boss"); addShake(12); }
-    else if (e.isChampion) { sfx("champ"); addShake(5); }
+    if (e.isBoss) {
+      sfx("boss_death");
+      addShake(14);
+      hitstop = Math.max(hitstop, 0.08);
+      hitFlashScreen = Math.max(hitFlashScreen, 0.55);
+      // death burst FX
+      aoeFx.push({
+        x: e.x, y: e.y, r: (e.r || 40) * 2.2,
+        life: 0.55, maxLife: 0.55, color: e.color || "#c04060", style: "burst",
+      });
+      for (let i = 0; i < 14; i++) {
+        particles.push({
+          x: e.x, y: e.y,
+          vx: rand(-160, 160), vy: rand(-160, 160),
+          life: 0.5 + Math.random() * 0.4, maxLife: 0.9,
+          size: 2 + Math.random() * 4, color: e.color || "#ff8060",
+        });
+      }
+    } else if (e.isChampion) { sfx("champ"); addShake(5); hitstop = Math.max(hitstop, 0.035); }
     else if (e.isMiniboss || e.isElite) { sfx("kill"); addShake(3); }
     else if (Math.random() < 0.25) sfx("kill");
     // Item on-kill
@@ -1601,7 +1626,7 @@
         if (Math.random() < 0.08) player.hp = Math.min(player.maxHp, player.hp + 1);
       }
     }
-    // Torment Shards (hard modes only)
+    // Torment / Agony Shards (hard modes) — bank ngay như vàng
     if (isHardModeRun()) {
       let sh = e.isBoss ? 8 : e.isChampion ? 3 : e.isMiniboss ? 2 : e.isElite ? 0.35 : 0.04;
       if (playMode === "torment") sh *= 1 + (tormentLevel || 1) * 0.08;
@@ -1609,11 +1634,13 @@
       if (sh >= 1 || Math.random() < sh) {
         const gain = Math.max(1, Math.round(sh));
         runShards += gain;
+        const banked = bankShardImmediate(gain);
         if (e.isBoss || e.isChampion || e.isMiniboss || Math.random() < 0.15) {
           floatingTexts.push({
             x: e.x, y: e.y - e.r - 20,
-            text: `+${gain} Shard`, life: 0.9, maxLife: 0.9, color: "#c080e0", vy: -28,
+            text: `+${banked || gain} Mảnh`, life: 0.9, maxLife: 0.9, color: "#c080e0", vy: -28,
           });
+          if (Math.random() < 0.5) sfx("shard");
         }
       }
     }
@@ -2056,6 +2083,7 @@
     if (name === "pause") {
       el.gameWrap.classList.remove("hidden");
       el.pause.classList.remove("hidden");
+      if (typeof syncSettingsUI === "function") syncSettingsUI();
     }
     if (name === "end") {
       el.gameWrap.classList.remove("hidden");
@@ -2099,6 +2127,7 @@
     const dur = findDuration(pendingDurationId);
     RUN_DURATION_SEC = dur.sec;
     runShards = 0;
+    runShardsBanked = 0;
     wellHealedThisRun = false;
     wellInteractCd = 0;
 
@@ -2145,6 +2174,10 @@
     barrelSpawnTimer = 8;
     kills = 0;
     gold = 0;
+    runGoldBanked = 0;
+    runShardsBanked = 0;
+    hitstop = 0;
+    hitFlashScreen = 0;
     abilityTraitPicks = 0;
     pendingForceAbilityUpgrade = false;
     elapsed = 0;
@@ -2652,6 +2685,38 @@
     showScreen("levelup");
   }
 
+  /** Phân loại thẻ lên cấp — nhãn VI + màu + thứ tự nhóm */
+  function levelUpCatMeta(u) {
+    const cat = (u && (u.kind === "ability_up" ? "ability_up" : u.cat)) || "base";
+    const map = {
+      base: {
+        key: "base", order: 0, label: "Cơ bản", short: "CƠ BẢN",
+        color: "#7ec850", tip: "Sinh tồn · máu · phòng thủ · di chuyển",
+      },
+      weapon: {
+        key: "weapon", order: 1, label: "Vũ khí", short: "VŨ KHÍ",
+        color: "#d4a84b", tip: "Sát thương đòn chính · chí mạng · tốc đánh",
+      },
+      weapon_prof: {
+        key: "weapon_prof", order: 2, label: "Thành thạo", short: "THÀNH THẠO",
+        color: "#c09050", tip: "Theo kiểu đánh của anh hùng",
+      },
+      ability: {
+        key: "ability", order: 3, label: "Khả năng", short: "KHẢ NĂNG",
+        color: "#8ab4ff", tip: "Tăng sức mạnh mọi khả năng đang có",
+      },
+      ab_trait: {
+        key: "ab_trait", order: 4, label: "Trait khả năng", short: "TRAIT KN",
+        color: "#c080e0", tip: "Cộng dồn cho 1 khả năng cụ thể",
+      },
+      ability_up: {
+        key: "ability_up", order: 5, label: "Nâng cấp KN", short: "NÂNG CẤP",
+        color: "#5b8def", tip: "Hiệu ứng đặc biệt · chọn tối đa 2 / khả năng",
+      },
+    };
+    return map[cat] || map.base;
+  }
+
   function fillLevelUpOptions() {
     const traits = availableTraits();
     const abUps = availableAbilityUpgrades();
@@ -2663,55 +2728,100 @@
     if (!pool.length && abUps.length) pool = abUps.slice();
     if (!pool.length) pool = UPGRADES.slice(0, 4);
 
-    const options = shuffle(pool).slice(0, 4);
+    // Lấy 4 ô, rồi sắp theo nhóm để dễ so sánh (cùng loại đứng gần nhau)
+    let options = shuffle(pool).slice(0, 4);
+    options = options.slice().sort((a, b) => {
+      const oa = levelUpCatMeta(a).order;
+      const ob = levelUpCatMeta(b).order;
+      if (oa !== ob) return oa - ob;
+      return String(a.name || "").localeCompare(String(b.name || ""), "vi");
+    });
     const doubleIdx = (Math.random() * options.length) | 0;
     el.upgradeOptions.innerHTML = "";
+    el.upgradeOptions.classList.add("levelup-grid");
     const title = el.levelup && el.levelup.querySelector("h2");
     const sub = document.getElementById("levelup-sub") || (el.levelup && el.levelup.querySelector("p"));
     if (title) title.textContent = "LÊN CẤP!";
     if (sub) {
       sub.innerHTML =
-        `Chọn 1 trong 4 · Thuộc tính / Nâng cấp khả năng · <span style="color:#d4a84b">1 ô ×2</span>` +
-        ` · Gieo lại bằng vàng trong màn`;
+        `<span class="lu-legend">` +
+        `<span class="lu-leg" style="--c:#7ec850">Cơ bản</span>` +
+        `<span class="lu-leg" style="--c:#d4a84b">Vũ khí</span>` +
+        `<span class="lu-leg" style="--c:#c09050">Thành thạo</span>` +
+        `<span class="lu-leg" style="--c:#8ab4ff">Khả năng</span>` +
+        `<span class="lu-leg" style="--c:#c080e0">Trait KN</span>` +
+        `<span class="lu-leg" style="--c:#5b8def">Nâng cấp KN</span>` +
+        `</span>` +
+        `<span class="lu-hint">Chọn <strong>1</strong> · <span style="color:#d4a84b">×2</span> = nhận gấp đôi · Gieo lại bằng vàng</span>`;
     }
 
     options.forEach((u, i) => {
+      const meta = levelUpCatMeta(u);
       const doubled = i === doubleIdx && u.kind !== "ability_up";
+
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "upgrade-btn pick-with-icon"
+      btn.className = "upgrade-btn pick-with-icon lu-card"
         + (doubled ? " doubled" : "")
-        + (u.kind === "ability_up" ? " ab-up" : "");
-      const rank = u.kind === "ability_up" ? "" : ` · Cấp ${(player.traitRanks[u.id] || 0) + 1}`;
-      const catMap = { ability: "khả năng", weapon: "vũ khí", base: "cơ bản", ab_trait: "khả năng", weapon_prof: "thành thạo" };
-      const catLabel = u.cat === "ab_trait" ? "khả năng" : u.cat === "weapon_prof" ? "thành thạo" : (catMap[u.cat] || u.cat || "");
-      const tag = u.kind === "ability_up"
-        ? `<em class="x2-badge">NÂNG CẤP</em>`
-        : (catLabel ? `<em class="trait-cat">${catLabel}</em>` : "");
+        + (u.kind === "ability_up" ? " ab-up" : "")
+        + " lu-cat-" + meta.key;
+      btn.style.setProperty("--cat", meta.color);
+      // Tooltip đầy đủ khi hover (thẻ gọn)
+      let abName = "";
+      if (u.abilityId && ABILITIES[u.abilityId]) abName = ABILITIES[u.abilityId].name;
+      btn.title = `${meta.label}${abName ? " · " + abName : ""}: ${u.name} — ${u.desc || ""}`;
 
-      // Icon: ability UPG / ability trait → ability icon; else trait icon
       const icon = document.createElement("canvas");
       icon.className = "pick-icon ability-icon";
       if (u.kind === "ability_up" && u.abilityId && typeof window.paintAbilityIcon === "function") {
         const ab = ABILITIES[u.abilityId];
-        window.paintAbilityIcon(icon, u.abilityId, (ab && ab.color) || "#d4a84b", 48);
+        window.paintAbilityIcon(icon, u.abilityId, (ab && ab.color) || meta.color, 36);
       } else if (u.cat === "ab_trait" && u.abilityId && typeof window.paintAbilityIcon === "function") {
         const ab = ABILITIES[u.abilityId];
-        window.paintAbilityIcon(icon, u.abilityId, (ab && ab.color) || "#8ab4ff", 48);
+        window.paintAbilityIcon(icon, u.abilityId, (ab && ab.color) || meta.color, 36);
       } else if (typeof window.paintTraitIcon === "function") {
-        window.paintTraitIcon(icon, u.id, null, 48, u.cat);
+        window.paintTraitIcon(icon, u.id, meta.color, 36, u.cat);
       }
 
       const body = document.createElement("div");
       body.className = "pick-body";
-      const titleEl = document.createElement("strong");
+
+      const badgeRow = document.createElement("div");
+      badgeRow.className = "lu-badges";
+      const catBadge = document.createElement("span");
+      catBadge.className = "lu-cat-badge";
+      catBadge.style.color = meta.color;
+      catBadge.style.borderColor = meta.color;
+      catBadge.textContent = meta.short;
+      badgeRow.appendChild(catBadge);
       if (doubled) {
-        titleEl.innerHTML = `${u.name}${rank} <em class="x2-badge">×2</em>`;
-      } else {
-        titleEl.innerHTML = `${u.name}${rank} ${tag}`;
+        const x2 = document.createElement("span");
+        x2.className = "x2-badge";
+        x2.textContent = "×2";
+        badgeRow.appendChild(x2);
       }
+      if (u.kind === "ability_up") {
+        const upBadge = document.createElement("span");
+        upBadge.className = "lu-unique-badge";
+        upBadge.textContent = "ĐẶC BIỆT";
+        badgeRow.appendChild(upBadge);
+      }
+
+      const titleEl = document.createElement("strong");
+      titleEl.className = "lu-name";
+      const curRank = u.kind === "ability_up" ? null : (player.traitRanks[u.id] || 0) + 1;
+      const maxR = u.maxRank || (u.kind === "ability_up" ? null : 5);
+      if (curRank != null && maxR != null) {
+        titleEl.innerHTML = `${u.name} <span class="lu-rank">${curRank}/${maxR}</span>`;
+      } else {
+        titleEl.textContent = u.name;
+      }
+
       const descEl = document.createElement("span");
+      descEl.className = "lu-desc";
       descEl.textContent = u.desc || "";
+
+      body.appendChild(badgeRow);
       body.appendChild(titleEl);
       body.appendChild(descEl);
 
@@ -2995,7 +3105,19 @@
 
   function pushAbilityFx(fx) {
     abilityFx.push(fx);
-    if (abilityFx.length > 80) abilityFx.splice(0, abilityFx.length - 80);
+    if (abilityFx.length > 100) abilityFx.splice(0, abilityFx.length - 100);
+  }
+
+  /** Soft cast flash + element SFX (shared by many abilities) */
+  function abilityCastAccent(def, px, py, elementHint) {
+    pushAbilityFx({
+      kind: "cast_flash", x: px, y: py,
+      life: 0.22, maxLife: 0.22, color: def.color || "#8ab4ff",
+    });
+    if (elementHint === "fire") sfx("fire");
+    else if (elementHint === "ice") sfx("ice");
+    else if (elementHint === "lightning") sfx("lightning");
+    else sfx("cast");
   }
 
   /** Unique cast VFX matching ability name */
@@ -3005,65 +3127,92 @@
     const px = player.x;
     const py = player.y;
 
-    if (id === "phantom_needles") {
-      pushAbilityFx({ kind: "needles_burst", x: px, y: py, life: 0.25, maxLife: 0.25, color: def.color, facing: player.facing });
+    if (id === "phantom_needles" || id === "transfixion") {
+      abilityCastAccent(def, px, py);
+      pushAbilityFx({
+        kind: "needles_burst", x: px, y: py, life: 0.32, maxLife: 0.32,
+        color: def.color, facing: player.facing,
+        aim: extra.aim != null ? extra.aim : (player.facing > 0 ? 0 : Math.PI),
+      });
     } else if (id === "arcane_splinters") {
-      pushAbilityFx({ kind: "splinter_ring", x: px, y: py, life: 0.35, maxLife: 0.35, color: def.color, r: 40 });
-    } else if (id === "lightning_strikes") {
-      for (const t of (extra.targets || [])) {
-        pushAbilityFx({ kind: "lightning_bolt", x0: t.x, y0: t.y - 180, x1: t.x, y1: t.y, life: 0.22, maxLife: 0.22, color: def.color });
+      abilityCastAccent(def, px, py);
+      pushAbilityFx({ kind: "splinter_ring", x: px, y: py, life: 0.4, maxLife: 0.4, color: def.color, r: 48 });
+    } else if (id === "lightning_strikes" || id === "kugelblitz") {
+      abilityCastAccent(def, px, py, "lightning");
+      if (id === "lightning_strikes") {
+        for (const t of (extra.targets || [])) {
+          pushAbilityFx({ kind: "lightning_bolt", x0: t.x, y0: t.y - 180, x1: t.x, y1: t.y, life: 0.28, maxLife: 0.28, color: def.color });
+        }
+      } else {
+        pushAbilityFx({ kind: "electric_spark", x: px, y: py, life: 0.35, maxLife: 0.35, color: def.color });
       }
     } else if (id === "flame_strike" || id === "dragons_breath") {
+      abilityCastAccent(def, px, py, "fire");
       pushAbilityFx({
         kind: "flame_cone",
         x: px, y: py,
         aim: extra.aim != null ? extra.aim : (player.facing > 0 ? 0 : Math.PI),
-        life: 0.35, maxLife: 0.35, color: def.color, wide: id === "dragons_breath",
+        life: 0.4, maxLife: 0.4, color: def.color, wide: id === "dragons_breath",
       });
     } else if (id === "frost_avalanche" || id === "kick_bass") {
-      pushAbilityFx({ kind: "frost_ring", x: px, y: py, life: 0.5, maxLife: 0.5, color: def.color, r: def.aoe || 120 });
+      abilityCastAccent(def, px, py, id === "frost_avalanche" ? "ice" : null);
+      pushAbilityFx({ kind: "frost_ring", x: px, y: py, life: 0.55, maxLife: 0.55, color: def.color, r: def.aoe || 120 });
     } else if (id === "hailstorm") {
-      pushAbilityFx({ kind: "hail_cloud", x: px, y: py - 40, life: 0.55, maxLife: 0.55, color: def.color });
+      abilityCastAccent(def, px, py, "ice");
+      pushAbilityFx({ kind: "hail_cloud", x: px, y: py - 40, life: 0.6, maxLife: 0.6, color: def.color });
     } else if (id === "meteor_strike" || id === "pyrotechnics") {
+      abilityCastAccent(def, px, py, "fire");
       for (const t of (extra.spots || [])) {
-        pushAbilityFx({ kind: "meteor_fall", x: t.x, y: t.y, life: 0.45, maxLife: 0.45, color: def.color });
+        pushAbilityFx({ kind: "meteor_fall", x: t.x, y: t.y, life: 0.5, maxLife: 0.5, color: def.color });
       }
-    } else if (id === "radiant_aura" || id === "mosh_pit") {
-      pushAbilityFx({ kind: "holy_pulse", x: px, y: py, life: 0.4, maxLife: 0.4, color: def.color, r: def.aoe || 100 });
-    } else if (id === "clay_golem") {
-      pushAbilityFx({ kind: "summon_burst", x: px + 40, y: py, life: 0.5, maxLife: 0.5, color: def.color });
-    } else if (id === "kugelblitz") {
-      pushAbilityFx({ kind: "electric_spark", x: px, y: py, life: 0.3, maxLife: 0.3, color: def.color });
+    } else if (id === "radiant_aura" || id === "mosh_pit" || id === "ring_blades") {
+      abilityCastAccent(def, px, py);
+      pushAbilityFx({ kind: "holy_pulse", x: px, y: py, life: 0.45, maxLife: 0.45, color: def.color, r: def.aoe || 100 });
+    } else if (id === "clay_golem" || id === "spirit_warrior") {
+      abilityCastAccent(def, px, py);
+      pushAbilityFx({ kind: "summon_burst", x: px + 40 * (player.facing || 1), y: py, life: 0.55, maxLife: 0.55, color: def.color });
     } else if (id === "arcane_rift") {
+      abilityCastAccent(def, px, py);
       for (const t of (extra.spots || [])) {
-        pushAbilityFx({ kind: "rift", x: t.x, y: t.y, life: 0.55, maxLife: 0.55, color: def.color });
+        pushAbilityFx({ kind: "rift", x: t.x, y: t.y, life: 0.6, maxLife: 0.6, color: def.color });
       }
     } else if (id === "spectral_fists") {
-      pushAbilityFx({ kind: "fists", x: px, y: py, life: 0.28, maxLife: 0.28, color: def.color, facing: player.facing });
-    } else if (id === "transfixion") {
-      pushAbilityFx({ kind: "arrow_volley", x: px, y: py, life: 0.25, maxLife: 0.25, color: def.color, aim: extra.aim || 0 });
+      abilityCastAccent(def, px, py);
+      pushAbilityFx({ kind: "fists", x: px, y: py, life: 0.32, maxLife: 0.32, color: def.color, facing: player.facing });
     } else if (id === "confetti_cannon") {
-      pushAbilityFx({ kind: "confetti", x: px, y: py, life: 0.55, maxLife: 0.55, color: def.color });
-    } else if (id === "killer_riff") {
-      pushAbilityFx({ kind: "sound_wave", x: px, y: py, life: 0.35, maxLife: 0.35, color: def.color, aim: extra.aim || 0 });
+      abilityCastAccent(def, px, py);
+      pushAbilityFx({ kind: "confetti", x: px, y: py, life: 0.6, maxLife: 0.6, color: def.color });
+    } else if (id === "killer_riff" || id === "morning_star") {
+      abilityCastAccent(def, px, py);
+      pushAbilityFx({
+        kind: "sound_wave", x: px, y: py, life: 0.4, maxLife: 0.4,
+        color: def.color, aim: extra.aim != null ? extra.aim : (player.facing > 0 ? 0 : Math.PI),
+      });
     } else if (id === "wall_of_death") {
-      pushAbilityFx({ kind: "death_wall", x: px, y: py, life: 0.4, maxLife: 0.4, color: def.color, facing: player.facing });
+      abilityCastAccent(def, px, py);
+      pushAbilityFx({ kind: "death_wall", x: px, y: py, life: 0.45, maxLife: 0.45, color: def.color, facing: player.facing });
     } else if (id === "enlightenment") {
+      abilityCastAccent(def, px, py);
       if (extra.target) {
         pushAbilityFx({
           kind: "holy_beam",
           x0: px, y0: py, x1: extra.target.x, y1: extra.target.y,
-          life: 0.28, maxLife: 0.28, color: def.color,
+          life: 0.32, maxLife: 0.32, color: def.color,
         });
       }
     } else if (id === "prismatic_cascade") {
-      pushAbilityFx({ kind: "prism_burst", x: px, y: py, life: 0.45, maxLife: 0.45, color: def.color });
+      abilityCastAccent(def, px, py);
+      pushAbilityFx({ kind: "prism_burst", x: px, y: py, life: 0.5, maxLife: 0.5, color: def.color });
     } else if (id === "undergrowth") {
+      abilityCastAccent(def, px, py);
       for (const t of (extra.spots || [])) {
-        pushAbilityFx({ kind: "vines", x: t.x, y: t.y, life: 0.5, maxLife: 0.5, color: def.color });
+        pushAbilityFx({ kind: "vines", x: t.x, y: t.y, life: 0.55, maxLife: 0.55, color: def.color });
       }
+    } else if (id === "astronomers_orbs") {
+      abilityCastAccent(def, px, py);
+      pushAbilityFx({ kind: "splinter_ring", x: px, y: py, life: 0.35, maxLife: 0.35, color: def.color, r: 36 });
     } else {
-      pushAbilityFx({ kind: "cast_flash", x: px, y: py, life: 0.2, maxLife: 0.2, color: def.color });
+      abilityCastAccent(def, px, py);
     }
   }
 
@@ -3781,34 +3930,27 @@
     const phaseLabel = phase === "boss" || phase === "boss_announce" || won ? "Chúa tể" : timeLabel;
     const itemN = (player.items || []).length;
 
-    // Shards: clear bonus
+    // Clear-bonus shards (chỉ khi thắng) — bank ngay
+    let clearShardBonus = 0;
     if (won) {
       if (playMode === "torment") {
-        runShards += Math.round(8 + (tormentLevel || 1) * 3);
-        // Unlock next level only after clear
+        clearShardBonus = Math.round(8 + (tormentLevel || 1) * 3);
         meta.tormentBest = Math.max(meta.tormentBest || 0, tormentLevel || 1);
         pendingTormentLevel = maxUnlockedTormentLevel();
         meta.tormentLevel = pendingTormentLevel;
       } else if (agonyEnabled) {
-        runShards += Math.round(5 + agonyRank * 2);
+        clearShardBonus = Math.round(5 + agonyRank * 2);
       } else {
-        runShards += 1;
+        clearShardBonus = 1;
+      }
+      if (clearShardBonus > 0) {
+        runShards += clearShardBonus;
+        bankShardImmediate(clearShardBonus);
       }
     }
-    // Shard Magnet meta
-    const shardFind = (meta.shardUpgrades && meta.shardUpgrades.shard_find) || 0;
-    const shardMul = 1 + shardFind * ((SHARD_SHOP.shard_find && SHARD_SHOP.shard_find.shardMulPerRank) || 0.15);
-    const shardsGained = Math.max(0, Math.round(runShards * shardMul));
-    if (shardsGained > 0) {
-      meta.shards = (meta.shards || 0) + shardsGained;
-    }
-
-    // Bank run gold → meta (Vault Tithe)
-    const bankRank = (meta.shardUpgrades && meta.shardUpgrades.bank_bonus) || 0;
-    const bankMul = 1 + bankRank * ((SHARD_SHOP.bank_bonus && SHARD_SHOP.bank_bonus.bankMulPerRank) || 0.1);
-    const goldBanked = Math.max(0, Math.round(gold * bankMul));
-    meta.gold = (meta.gold || 0) + goldBanked;
-
+    // Mảnh/vàng đã bank live — không cộng lại
+    const shardsGained = Math.max(0, runShardsBanked | 0);
+    const goldBanked = Math.max(0, runGoldBanked | 0);
     saveMeta();
     updateMetaBar();
 
@@ -3819,12 +3961,15 @@
   }
 
   function returnToMenu() {
+    // Out giữa run: vàng đã bank khi nhặt; flush meta lần nữa cho chắc
+    try { saveMeta(); } catch (_) { /* ignore */ }
     state = "menu";
     cancelAnimationFrame(animId);
     hideBanner();
     if (el.wellOverlay) el.wellOverlay.classList.add("hidden");
     el.bossBarWrap.classList.add("hidden");
     showScreen("menu");
+    updateMetaBar();
     clampPendingTormentLevel();
     ensureDurationForMode();
     buildDurationPicks();
@@ -3884,20 +4029,29 @@
     });
     const styleMap = { melee: "cận chiến", arrow: "mũi tên", chain: "xích sét", cone: "nón", projectile: "đạn đạo" };
     const styleVi = styleMap[player.style] || player.style || "—";
+    const topItems = itemLines.filter(Boolean).slice(0, 5);
+    const moreItems = Math.max(0, itemLines.filter(Boolean).length - topItems.length);
     box.innerHTML = `
-      <h3>Anh hùng · chỉ số đầy đủ</h3>
-      <ul><li>${player.name} · Cấp ${player.level} · kiểu ${styleVi}</li>
-      <li>Máu ${Math.ceil(player.hp)}/${Math.round(player.maxHp)} · Sát thương ${Math.round(player.damage)}</li>
-      <li>Tỷ lệ chí mạng ${Math.round((player.critChance || 0) * 100)}% · Sát thương chí mạng +${Math.round((player.critBonus || 0) * 100)}% · Đa đòn ${(player.multistrike || 1).toFixed(2)}</li>
-      <li>Phòng thủ ${Math.round(player.defense || 0)} (~${drPct}% giảm sát thương) · Sức chắn ${Math.round(player.blockStrength || 0)} · Lực đẩy ${(player.force || 1).toFixed(2)}</li>
-      <li>Nhận kinh nghiệm ${Math.round((player.xpGain || 1) * 100)}% · Tỷ lệ hiệu ứng +${Math.round((player.effectChance || 0) * 100)}%</li>
-      <li>Vàng ${gold} · Mạng ${kills}</li></ul>
-      <h3>Thuộc tính / Thành thạo</h3>
-      ${traitLines.length ? `<ul>${traitLines.join("")}</ul>` : `<p class="bs-empty">Chưa có thuộc tính</p>`}
-      <h3>Khả năng</h3>
-      ${abLines.length ? `<ul>${abLines.join("")}</ul>` : `<p class="bs-empty">Chưa có khả năng</p>`}
-      <h3>Trang bị</h3>
-      ${itemLines.filter(Boolean).length ? `<ul>${itemLines.join("")}</ul>` : `<p class="bs-empty">Chưa có trang bị</p>`}
+      <h3>Tóm tắt build</h3>
+      <ul class="bs-core">
+        <li><strong>${player.name}</strong> · Cấp ${player.level} · ${styleVi}</li>
+        <li>Máu ${Math.ceil(player.hp)}/${Math.round(player.maxHp)} · ST ${Math.round(player.damage)} · CM ${Math.round((player.critChance || 0) * 100)}%</li>
+        <li>Vàng run ${gold} · Bank ${runGoldBanked || 0} · Mạng ${kills} · Mảnh bank ${runShardsBanked || 0}</li>
+      </ul>
+      <h3>Khả năng ${abLines.length ? `(${abLines.length})` : ""}</h3>
+      ${abLines.length ? `<ul>${abLines.slice(0, 4).join("")}</ul>` : `<p class="bs-empty">Chưa có khả năng</p>`}
+      <h3>Trang bị ${itemLines.filter(Boolean).length ? `(${itemLines.filter(Boolean).length})` : ""}</h3>
+      ${topItems.length ? `<ul>${topItems.join("")}${moreItems ? `<li class="bs-empty">+${moreItems} món khác…</li>` : ""}</ul>` : `<p class="bs-empty">Chưa có trang bị</p>`}
+      <details class="bs-more">
+        <summary>Chi tiết chỉ số · thuộc tính</summary>
+        <ul>
+          <li>ST chí mạng +${Math.round((player.critBonus || 0) * 100)}% · Đa đòn ${(player.multistrike || 1).toFixed(2)}</li>
+          <li>Phòng thủ ${Math.round(player.defense || 0)} (~${drPct}%) · Chắn ${Math.round(player.blockStrength || 0)} · Lực ${(player.force || 1).toFixed(2)}</li>
+          <li>Nhận KN ${Math.round((player.xpGain || 1) * 100)}% · Hiệu ứng +${Math.round((player.effectChance || 0) * 100)}%</li>
+        </ul>
+        <h3>Thuộc tính</h3>
+        ${traitLines.length ? `<ul>${traitLines.join("")}</ul>` : `<p class="bs-empty">Chưa có</p>`}
+      </details>
     `;
   }
 
@@ -4215,7 +4369,7 @@
       body.className = "camp-card-body";
       body.innerHTML =
         `<strong style="color:${m.color || "#d4a84b"}">${m.name}</strong>` +
-        `<span>${m.desc}</span>` +
+        `<span class="camp-card-desc">${m.desc || ""}</span>` +
         `<span class="camp-cost">${costLine}</span>`;
       btn.appendChild(icon);
       btn.appendChild(body);
@@ -4305,56 +4459,66 @@
     p._artFlags = f;
   }
 
+  /** Sync all settings controls (camp + pause Esc menu) */
   function syncSettingsUI() {
-    const vol = document.getElementById("set-vol");
-    const lab = document.getElementById("vol-label");
-    const sfxEl = document.getElementById("set-sfx");
-    const sh = document.getElementById("set-shake");
-    const gp = document.getElementById("set-gamepad");
-    if (vol) vol.value = Math.round((settings.masterVol != null ? settings.masterVol : 0.55) * 100);
-    if (lab) lab.textContent = `${vol ? vol.value : 55}%`;
-    if (sfxEl) sfxEl.checked = !!settings.sfx;
-    if (sh) sh.checked = settings.shake !== false;
-    if (gp) gp.checked = settings.gamepad !== false;
+    const pct = Math.round((settings.masterVol != null ? settings.masterVol : 0.55) * 100);
+    const pairs = [
+      ["set-vol", "vol-label"],
+      ["pause-set-vol", "pause-vol-label"],
+    ];
+    for (const [vid, lid] of pairs) {
+      const vol = document.getElementById(vid);
+      const lab = document.getElementById(lid);
+      if (vol) vol.value = String(pct);
+      if (lab) lab.textContent = `${pct}%`;
+    }
+    const checks = [
+      ["set-sfx", "pause-set-sfx", !!settings.sfx],
+      ["set-shake", "pause-set-shake", settings.shake !== false],
+      ["set-gamepad", "pause-set-gamepad", settings.gamepad !== false],
+    ];
+    for (const [a, b, val] of checks) {
+      const elA = document.getElementById(a);
+      const elB = document.getElementById(b);
+      if (elA) elA.checked = val;
+      if (elB) elB.checked = val;
+    }
   }
 
   function wireSettingsUI() {
-    const vol = document.getElementById("set-vol");
-    const lab = document.getElementById("vol-label");
-    const sfxEl = document.getElementById("set-sfx");
-    const sh = document.getElementById("set-shake");
-    const gp = document.getElementById("set-gamepad");
-    const clearBtn = document.getElementById("btn-clear-meta");
-    if (vol && !vol.dataset.wired) {
+    function bindVol(inputId, labelId) {
+      const vol = document.getElementById(inputId);
+      if (!vol || vol.dataset.wired) return;
       vol.dataset.wired = "1";
       vol.addEventListener("input", () => {
         settings.masterVol = (Number(vol.value) || 0) / 100;
-        if (lab) lab.textContent = `${vol.value}%`;
         saveSettings();
+        syncSettingsUI();
       });
     }
-    if (sfxEl && !sfxEl.dataset.wired) {
-      sfxEl.dataset.wired = "1";
-      sfxEl.addEventListener("change", () => {
-        settings.sfx = !!sfxEl.checked;
+    function bindCheck(inputId, key, playUi) {
+      const elChk = document.getElementById(inputId);
+      if (!elChk || elChk.dataset.wired) return;
+      elChk.dataset.wired = "1";
+      elChk.addEventListener("change", () => {
+        if (key === "sfx") settings.sfx = !!elChk.checked;
+        else if (key === "shake") settings.shake = !!elChk.checked;
+        else if (key === "gamepad") settings.gamepad = !!elChk.checked;
         saveSettings();
-        sfx("ui");
+        syncSettingsUI();
+        if (playUi) sfx("ui");
       });
     }
-    if (sh && !sh.dataset.wired) {
-      sh.dataset.wired = "1";
-      sh.addEventListener("change", () => {
-        settings.shake = !!sh.checked;
-        saveSettings();
-      });
-    }
-    if (gp && !gp.dataset.wired) {
-      gp.dataset.wired = "1";
-      gp.addEventListener("change", () => {
-        settings.gamepad = !!gp.checked;
-        saveSettings();
-      });
-    }
+    bindVol("set-vol", "vol-label");
+    bindVol("pause-set-vol", "pause-vol-label");
+    bindCheck("set-sfx", "sfx", true);
+    bindCheck("pause-set-sfx", "sfx", true);
+    bindCheck("set-shake", "shake", false);
+    bindCheck("pause-set-shake", "shake", false);
+    bindCheck("set-gamepad", "gamepad", false);
+    bindCheck("pause-set-gamepad", "gamepad", false);
+
+    const clearBtn = document.getElementById("btn-clear-meta");
     if (clearBtn && !clearBtn.dataset.wired) {
       clearBtn.dataset.wired = "1";
       clearBtn.addEventListener("click", () => {
@@ -4379,6 +4543,17 @@
     }
   }
 
+  function campCardBodyHtml(nameHtml, descHtml, costHtml, rankHtml) {
+    return (
+      `<div class="camp-card-body">` +
+      (nameHtml || "") +
+      (rankHtml || "") +
+      (descHtml || "") +
+      (costHtml || "") +
+      `</div>`
+    );
+  }
+
   function buildBlessingGrid() {
     const grid = document.getElementById("blessing-grid");
     if (!grid) return;
@@ -4394,17 +4569,18 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "camp-card" + (maxed ? " maxed" : "") + (!can && !maxed ? " cannot-afford" : "");
-      btn.innerHTML =
-        `<strong>${b.name}</strong>` +
-        `<span class="camp-rank">Rank ${rank}/${max}</span>` +
-        `<span>${b.desc}</span>` +
-        `<span class="camp-cost">${maxed ? "MAX" : `Next: ${cost}G`}</span>`;
+      btn.innerHTML = campCardBodyHtml(
+        `<strong>${b.name}</strong>`,
+        `<span class="camp-card-desc">${b.desc || ""}</span>`,
+        `<span class="camp-cost">${maxed ? "TỐI ĐA" : `Tiếp: ${cost} Vàng`}</span>`,
+        `<span class="camp-rank">Cấp ${rank}/${max}</span>`
+      );
       btn.disabled = maxed;
       btn.addEventListener("click", () => {
         if (buyBlessing(id)) {
           /* rebuilt in buy */
         } else if (!maxed) {
-          showBanner("Thiếu Gold", `Cần ${cost}G bank`, 1.2);
+          showBanner("Thiếu Vàng", `Cần ${cost} Vàng ngân hàng`, 1.2);
         }
       });
       grid.appendChild(btn);
@@ -4429,13 +4605,33 @@
         const it = ITEMS[id];
         if (!it || it.slot !== slot) continue;
         const on = load.has(id);
+        const col = it.color || "#d4a84b";
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = "camp-card" + (on ? " selected" : "");
-        btn.innerHTML =
-          `<strong style="color:${it.color || "#d4a84b"}">${it.name}</strong>` +
-          `<span>${it.desc}</span>` +
-          `<span class="camp-cost">${on ? "ĐANG ĐEO (Thường)" : "bấm · bắt đầu độ Thường"}</span>`;
+        btn.className = "camp-card camp-card-item" + (on ? " selected" : "");
+        btn.title = `${it.name}: ${it.desc || ""}`;
+
+        const icon = document.createElement("canvas");
+        icon.className = "camp-card-icon item-well-icon";
+        try {
+          if (typeof window.paintItemIcon === "function") {
+            window.paintItemIcon(icon, id, col, 44);
+          } else if (typeof window.paintItemSlotIcon === "function") {
+            window.paintItemSlotIcon(icon, it.slot, col, 44, id);
+          }
+        } catch (err) {
+          console.warn("well icon", id, err);
+        }
+
+        const body = document.createElement("div");
+        body.className = "camp-card-body";
+        body.innerHTML =
+          `<strong style="color:${col}">${it.name}</strong>` +
+          `<span class="camp-card-desc">${it.desc || ""}</span>` +
+          `<span class="camp-cost">${on ? "ĐANG ĐEO · Thường" : "Bấm · trang bị khởi đầu · Thường"}</span>`;
+
+        btn.appendChild(icon);
+        btn.appendChild(body);
         btn.addEventListener("click", () => toggleLoadoutItem(id));
         grid.appendChild(btn);
       }
@@ -4457,15 +4653,16 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "camp-card" + (maxed ? " maxed" : "") + (!can && !maxed ? " cannot-afford" : "");
-      btn.innerHTML =
-        `<strong>${s.name}</strong>` +
-        `<span class="camp-rank">Rank ${rank}/${max}</span>` +
-        `<span>${s.desc}</span>` +
-        `<span class="camp-cost">${maxed ? "MAX" : `Next: ${cost} Shards`}</span>`;
+      btn.innerHTML = campCardBodyHtml(
+        `<strong>${s.name}</strong>`,
+        `<span class="camp-card-desc">${s.desc || ""}</span>`,
+        `<span class="camp-cost">${maxed ? "TỐI ĐA" : `Tiếp: ${cost} Mảnh`}</span>`,
+        `<span class="camp-rank">Cấp ${rank}/${max}</span>`
+      );
       btn.disabled = maxed;
       btn.addEventListener("click", () => {
         if (!buyShardUpgrade(id) && !maxed) {
-          showBanner("Thiếu Shards", `Cần ${cost} shards`, 1.2);
+          showBanner("Thiếu Mảnh", `Cần ${cost} mảnh`, 1.2);
         }
       });
       grid.appendChild(btn);
@@ -4819,6 +5016,44 @@
   }
 
   // ─── Gold / Chests / Items ───────────────────────────────
+
+  /**
+   * Cộng vàng vào meta.gold ngay (Vault Tithe / bank_bonus).
+   * Out game giữa run vẫn giữ — không đợi endGame.
+   * @returns {number} số vàng thực cộng vào ngân hàng
+   */
+  function bankGoldImmediate(amount) {
+    const amt = Math.max(0, Math.round(Number(amount) || 0));
+    if (amt <= 0) return 0;
+    const bankRank = (meta.shardUpgrades && meta.shardUpgrades.bank_bonus) || 0;
+    const per = (SHARD_SHOP.bank_bonus && SHARD_SHOP.bank_bonus.bankMulPerRank) || 0.1;
+    const bankMul = 1 + bankRank * per;
+    const banked = Math.max(0, Math.round(amt * bankMul));
+    if (banked <= 0) return 0;
+    meta.gold = (meta.gold || 0) + banked;
+    runGoldBanked = (runGoldBanked || 0) + banked;
+    saveMeta();
+    return banked;
+  }
+
+  /**
+   * Cộng mảnh vào meta.shards ngay (Shard Magnet áp dụng tại bank).
+   * Out giữa run vẫn giữ mảnh đã nhặt.
+   */
+  function bankShardImmediate(amount) {
+    const amt = Math.max(0, Math.round(Number(amount) || 0));
+    if (amt <= 0) return 0;
+    const shardFind = (meta.shardUpgrades && meta.shardUpgrades.shard_find) || 0;
+    const per = (SHARD_SHOP.shard_find && SHARD_SHOP.shard_find.shardMulPerRank) || 0.15;
+    const mul = 1 + shardFind * per;
+    const banked = Math.max(0, Math.round(amt * mul));
+    if (banked <= 0) return 0;
+    meta.shards = (meta.shards || 0) + banked;
+    runShardsBanked = (runShardsBanked || 0) + banked;
+    saveMeta();
+    return banked;
+  }
+
   function spawnGold(x, y, amount) {
     const gMul = (BALANCE.goldMul || 1) * (getDiffMods().goldMul || 1);
     goldCoins.push({
@@ -4983,6 +5218,8 @@
       }
       if (dist(g, player) < g.r + player.r + 6) {
         gold += g.amount;
+        // Bank ngay → meta (out giữa run vẫn giữ)
+        const banked = bankGoldImmediate(g.amount);
         // Golden Scarab: gold pickups hurt equal to value
         if (player.artGoldHurts) {
           player.hp = Math.max(1, player.hp - g.amount * 0.35);
@@ -4992,7 +5229,9 @@
         }
         if (Math.random() < 0.35) sfx("gold");
         floatingTexts.push({
-          x: g.x, y: g.y - 10, text: `+${g.amount}G`, life: 0.7, maxLife: 0.7, color: "#d4a84b", vy: -30,
+          x: g.x, y: g.y - 10,
+          text: banked !== g.amount ? `+${g.amount}G · bank ${banked}` : `+${g.amount}G`,
+          life: 0.7, maxLife: 0.7, color: "#d4a84b", vy: -30,
         });
         goldCoins.splice(i, 1);
         continue;
@@ -5589,6 +5828,7 @@
     }
     player.items.push(makeItemEntry(itemId, rar));
     rebuildPlayerFromMeta();
+    sfx("equip");
     const rm = rarityMeta(rar);
     floatingTexts.push({
       x: player.x, y: player.y - 42,
@@ -5623,25 +5863,30 @@
         `Chọn 1 trang bị · Thường / Hiếm vừa / Cực hiếm · <span style="color:#d4a84b">${ITEM_ORDER.length} món gốc</span>`;
     }
     options.forEach((opt) => {
-      const it = ITEMS[opt.id];
+      const itemId = opt.id;
+      const it = ITEMS[itemId];
       if (!it) return;
       const rm = rarityMeta(opt.rarity);
-      const slotLab = ITEM_SLOT_LABELS[it.slot] || it.slot;
+      const slotLab = (ITEM_SLOT_LABELS && ITEM_SLOT_LABELS[it.slot]) || it.slot || "";
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "upgrade-btn pick-with-icon rar-" + (opt.rarity || "common");
       const icon = document.createElement("canvas");
       icon.className = "pick-icon ability-icon";
-      if (typeof window.paintItemSlotIcon === "function") {
-        window.paintItemSlotIcon(icon, it.slot, rm.color || it.color, 48);
+      try {
+        if (typeof window.paintItemSlotIcon === "function") {
+          window.paintItemSlotIcon(icon, it.slot, rm.color || it.color, 48, itemId);
+        }
+      } catch (err) {
+        console.warn("paintItemSlotIcon", itemId, err);
       }
       const body = document.createElement("div");
       body.className = "pick-body";
       const titleEl = document.createElement("strong");
       titleEl.style.color = rm.color || it.color;
-      titleEl.innerHTML = `${it.name}<span class="rar-badge" style="color:${rm.color}">${rm.label}</span>`;
+      titleEl.innerHTML = `${it.name}<span class="rar-badge" style="color:${rm.color || it.color}">${rm.label || ""}</span>`;
       const metaEl = document.createElement("span");
-      metaEl.style.color = rm.color;
+      metaEl.style.color = rm.color || it.color;
       metaEl.textContent = `${slotLab} · hiệu ứng riêng theo độ hiếm`;
       const descEl = document.createElement("span");
       descEl.textContent = itemDescFor(it, opt.rarity);
@@ -5651,8 +5896,8 @@
       btn.appendChild(icon);
       btn.appendChild(body);
       btn.addEventListener("click", () => {
-        equipItem(opt.id, opt.rarity);
-        toast(`${it.name} (${rm.label})`, "good", 1400);
+        equipItem(itemId, opt.rarity);
+        toast(`${it.name} (${rm.label || opt.rarity})`, "good", 1400);
         sfx("pickup");
         state = "playing";
         showScreen("game");
@@ -5667,33 +5912,65 @@
   function updateItemHud() {
     if (!el.itemHud || !player) return;
     el.itemHud.innerHTML = "";
-    for (const entry of player.items || []) {
+    const items = player.items || [];
+    const maxItems = typeof MAX_ITEMS === "number" ? MAX_ITEMS : 7;
+    const countEl = document.getElementById("item-count");
+    if (countEl) countEl.textContent = `${items.length}/${maxItems}`;
+    const emptyEl = document.getElementById("item-hud-empty");
+    if (emptyEl) emptyEl.classList.toggle("hidden", items.length > 0);
+    for (const entry of items) {
       const id = itemIdOf(entry);
       const rar = itemRarityOf(entry);
       const it = ITEMS[id];
       if (!it) continue;
       const rm = rarityMeta(rar);
-      const chip = document.createElement("span");
-      chip.className = "item-chip";
-      chip.style.borderColor = rm.color || it.color || "#d4a84b";
-      chip.style.color = rm.color || it.color || "#d4a84b";
+      const col = rm.color || it.color || "#d4a84b";
+      const slotLab = (ITEM_SLOT_LABELS && ITEM_SLOT_LABELS[it.slot]) || it.slot || "";
+      const desc = itemDescFor(it, rar) || "";
+
+      const card = document.createElement("div");
+      card.className = "item-status-card" + (rar === "rare" ? " rar-rare" : rar === "uncommon" ? " rar-uncommon" : " rar-common");
+      card.style.borderColor = col;
+      card.title = `${it.name} [${rm.label}] [${slotLab}]: ${desc}`;
+
       const icon = document.createElement("canvas");
-      icon.width = 18;
-      icon.height = 18;
-      if (typeof window.paintItemSlotIcon === "function") {
-        window.paintItemSlotIcon(icon, it.slot, rm.color || it.color, 18);
+      icon.className = "item-status-icon";
+      icon.width = 40;
+      icon.height = 40;
+      try {
+        if (typeof window.paintItemSlotIcon === "function") {
+          window.paintItemSlotIcon(icon, it.slot, col, 40, id);
+        }
+      } catch (err) {
+        console.warn("paintItemSlotIcon hud", id, err);
       }
-      const lab = document.createElement("span");
-      const words = it.name.split(" ");
-      lab.textContent = words.length > 1 ? words[words.length - 1].slice(0, 6) : words[0].slice(0, 6);
-      const rarEl = document.createElement("span");
-      rarEl.className = "ic-rar";
-      rarEl.textContent = rar === "rare" ? "R" : rar === "uncommon" ? "U" : "C";
-      chip.appendChild(icon);
-      chip.appendChild(lab);
-      chip.appendChild(rarEl);
-      chip.title = `${it.name} [${rm.label}] [${ITEM_SLOT_LABELS[it.slot] || it.slot}]: ${itemDescFor(it, rar)}`;
-      el.itemHud.appendChild(chip);
+
+      const body = document.createElement("div");
+      body.className = "item-status-body";
+
+      const head = document.createElement("div");
+      head.className = "item-status-head";
+      const nameEl = document.createElement("span");
+      nameEl.className = "item-status-name";
+      nameEl.style.color = col;
+      nameEl.textContent = it.name || id;
+      const metaEl = document.createElement("span");
+      metaEl.className = "item-status-meta";
+      metaEl.innerHTML =
+        `<em class="item-status-rar" style="color:${col}">${rm.label || rar}</em>` +
+        `<em class="item-status-slot">${slotLab}</em>`;
+      head.appendChild(nameEl);
+      head.appendChild(metaEl);
+
+      const statsEl = document.createElement("div");
+      statsEl.className = "item-status-stats";
+      statsEl.textContent = desc;
+
+      body.appendChild(head);
+      body.appendChild(statsEl);
+      card.appendChild(icon);
+      card.appendChild(body);
+      el.itemHud.appendChild(card);
     }
     updateRunPills();
   }
@@ -7085,16 +7362,45 @@
   function drawHeroLegs(x, by, f, pal, flash, stride) {
     const s = stride || 0;
     const dark = flash ? "#fff" : pal.dark;
-    ctx.fillStyle = softFill(dark, x - 8, by + 6, x + 8, by + 18);
-    roundRect(x - 7, by + 6, 5, 10 + (s > 0 ? 1 : 0), 2);
-    ctx.fill();
-    roundRect(x + 2, by + 6 + s, 5, 10 - s, 2);
-    ctx.fill();
+    if (!flash && window.HOT_ART && window.HOT_ART.softCapsule) {
+      window.HOT_ART.softCapsule(ctx, x - 7, by + 6, 5, 10 + (s > 0 ? 1 : 0), dark);
+      window.HOT_ART.softCapsule(ctx, x + 2, by + 6 + s, 5, 10 - s, dark);
+    } else {
+      ctx.fillStyle = softFill(dark, x - 8, by + 6, x + 8, by + 18);
+      roundRect(x - 7, by + 6, 5, 10 + (s > 0 ? 1 : 0), 2);
+      ctx.fill();
+      roundRect(x + 2, by + 6 + s, 5, 10 - s, 2);
+      ctx.fill();
+    }
     ctx.fillStyle = flash ? "#fff" : "#2a2030";
     roundRect(x - 8, by + 14, 6, 4, 1.5);
     ctx.fill();
     roundRect(x + 2, by + 14 + s, 6, 4, 1.5);
     ctx.fill();
+  }
+
+  /** Soft skill aura ring around hero */
+  function drawHeroSkillAura(x, by, color, skillOn) {
+    if (!skillOn) return;
+    const pulse = 16 + Math.sin(elapsed * 16) * 3;
+    ctx.save();
+    if (window.HOT_ART) {
+      const g = ctx.createRadialGradient(x, by, 4, x, by, pulse + 10);
+      g.addColorStop(0, window.HOT_ART.hexA(color || "#d4a84b", 0.2));
+      g.addColorStop(1, "transparent");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, by, pulse + 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.strokeStyle = color || "#d4a84b";
+    ctx.globalAlpha = 0.45 + Math.sin(elapsed * 12) * 0.12;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, by, pulse, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   function drawHeroHead(x, by, f, pal, flash, opts) {
@@ -7176,8 +7482,9 @@
     // Soft gradient body (design system)
     if (!flash && window.HOT_ART) {
       const g = ctx.createLinearGradient(x - 10, by - 8, x + 10, by + 16);
-      g.addColorStop(0, window.HOT_ART.shade(armor, 0.18));
-      g.addColorStop(1, window.HOT_ART.shade(armor, -0.12));
+      g.addColorStop(0, window.HOT_ART.shade(armor, 0.22));
+      g.addColorStop(0.55, armor);
+      g.addColorStop(1, window.HOT_ART.shade(armor, -0.15));
       ctx.fillStyle = g;
     } else {
       ctx.fillStyle = armor;
@@ -7190,6 +7497,7 @@
       ctx.lineTo(x - 13, by + 16);
       ctx.closePath();
       ctx.fill();
+      strokeSoftOutline();
       ctx.fillStyle = accent;
       ctx.globalAlpha = 0.45;
       ctx.beginPath();
@@ -7201,13 +7509,23 @@
       ctx.fill();
       ctx.globalAlpha = 1;
     } else {
-      roundRect(x - 9 + lean * 0.4, by - 8, 18, 16, 3);
-      ctx.fill();
+      if (!flash && window.HOT_ART && window.HOT_ART.softCapsule) {
+        window.HOT_ART.softCapsule(ctx, x - 9 + lean * 0.4, by - 8, 18, 16, armor);
+      } else {
+        roundRect(x - 9 + lean * 0.4, by - 8, 18, 16, 3);
+        ctx.fill();
+      }
       ctx.fillStyle = accent;
       ctx.globalAlpha = 0.55;
       roundRect(x - 6 + lean * 0.4, by - 5, 12, 5, 2);
       ctx.fill();
       ctx.globalAlpha = 1;
+      // soft highlight
+      if (!flash) {
+        ctx.fillStyle = "rgba(255,255,255,0.12)";
+        roundRect(x - 7 + lean * 0.4, by - 7, 8, 4, 2);
+        ctx.fill();
+      }
     }
   }
 
@@ -7238,101 +7556,217 @@
     ctx.globalAlpha = 1;
   }
 
-  // ── Individual heroes ───────────────────────────────────
+  // ── Soft hero helpers (per-class polish) ─────────────────
+  function softCol(flash, c, liteAmt) {
+    if (flash) return "#ffffff";
+    if (window.HOT_ART && liteAmt) return window.HOT_ART.shade(c, liteAmt);
+    return c;
+  }
+  function softMetal(flash, color, x0, y0, x1, y1) {
+    if (flash) return "#ffffff";
+    if (window.HOT_ART) {
+      const g = ctx.createLinearGradient(x0, y0, x1, y1);
+      g.addColorStop(0, window.HOT_ART.shade(color, 0.35));
+      g.addColorStop(0.45, color);
+      g.addColorStop(1, window.HOT_ART.shade(color, -0.25));
+      return g;
+    }
+    return color;
+  }
+  function softCape(x, by, f, lean, color, flash, spread) {
+    const sp = spread != null ? spread : 18;
+    ctx.save();
+    if (!flash && window.HOT_ART) {
+      const g = ctx.createLinearGradient(x, by - 6, x - sp * f, by + 18);
+      g.addColorStop(0, window.HOT_ART.shade(color, 0.15));
+      g.addColorStop(1, window.HOT_ART.shade(color, -0.2));
+      ctx.fillStyle = g;
+    } else {
+      ctx.fillStyle = flash ? "#fff" : color;
+    }
+    ctx.beginPath();
+    ctx.moveTo(x - 4 * f, by - 5);
+    ctx.quadraticCurveTo(x - sp * f - (lean || 0), by + 6, x - (sp * 0.45) * f, by + 18);
+    ctx.lineTo(x + 3 * f, by + 7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+  function softBladeLocal(len, w, color, flash) {
+    // drawn in local space, tip up (negative y)
+    ctx.fillStyle = softMetal(flash, color, -w, -len, w, 4);
+    ctx.beginPath();
+    ctx.moveTo(0, -len);
+    ctx.lineTo(w * 0.55, -len * 0.15);
+    ctx.lineTo(w * 0.35, 4);
+    ctx.lineTo(-w * 0.35, 4);
+    ctx.lineTo(-w * 0.55, -len * 0.15);
+    ctx.closePath();
+    ctx.fill();
+    if (!flash) {
+      ctx.fillStyle = "rgba(255,255,255,0.28)";
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.15, -len * 0.85);
+      ctx.lineTo(w * 0.08, -len * 0.2);
+      ctx.lineTo(-w * 0.05, 2);
+      ctx.lineTo(-w * 0.22, -len * 0.2);
+      ctx.fill();
+    }
+  }
+  function softGrip(h, color, flash) {
+    if (!flash && window.HOT_ART && window.HOT_ART.softCapsule) {
+      window.HOT_ART.softCapsule(ctx, -2, 0, 4, h, color);
+    } else {
+      ctx.fillStyle = flash ? "#fff" : color;
+      ctx.fillRect(-2, 0, 4, h);
+    }
+  }
+  function softOrbLocal(y, r, color, flash) {
+    if (!flash && window.HOT_ART && window.HOT_ART.softDisc) {
+      window.HOT_ART.softDisc(ctx, 0, y, r, color, softCol(false, color, 0.35));
+    } else {
+      ctx.fillStyle = flash ? "#fff" : color;
+      ctx.beginPath();
+      ctx.arc(0, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  function softClassAura(x, by, color, skillOn, style) {
+    if (!skillOn) return;
+    const pulse = 18 + Math.sin(elapsed * 14) * 3;
+    ctx.save();
+    if (window.HOT_ART) {
+      const g = ctx.createRadialGradient(x, by, 2, x, by, pulse + 12);
+      g.addColorStop(0, window.HOT_ART.hexA(color, 0.28));
+      g.addColorStop(1, "transparent");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, by, pulse + 12, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.5;
+    ctx.lineWidth = 2;
+    if (style === "fire") {
+      for (let i = 0; i < 5; i++) {
+        const a = elapsed * 4 + (i / 5) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(x + Math.cos(a) * pulse, by + Math.sin(a) * pulse * 0.5, 3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    } else if (style === "ice") {
+      ctx.beginPath();
+      ctx.arc(x, by, pulse, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 0.25;
+      ctx.beginPath();
+      ctx.arc(x, by, pulse * 0.65, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (style === "holy") {
+      ctx.beginPath();
+      ctx.arc(x, by, pulse, 0, Math.PI * 2);
+      ctx.stroke();
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2 + elapsed;
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(a) * (pulse - 4), by + Math.sin(a) * (pulse - 4));
+        ctx.lineTo(x + Math.cos(a) * (pulse + 4), by + Math.sin(a) * (pulse + 4));
+        ctx.stroke();
+      }
+    } else if (style === "void") {
+      ctx.globalAlpha = 0.35 + Math.sin(elapsed * 8) * 0.1;
+      ctx.beginPath();
+      ctx.ellipse(x, by, pulse * 1.1, pulse * 0.45, elapsed, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(x, by, pulse, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ── Individual heroes (soft detailed) ───────────────────
 
   function drawSwordsmanHero(x, y, f, bob, flash, skillOn, pose, pal) {
     const lean = pose.phase === 0 ? -2 * f : pose.phase === 1 ? 5 * f : 0;
-    const by = y + Math.sin(bob) * 1.5;
+    const by = y + Math.sin(bob) * 0.8;
     drawShadow(x, y + 16, 14, 5);
-    // cape
-    ctx.fillStyle = flash ? "#fff" : "#8b2030";
-    ctx.beginPath();
-    ctx.moveTo(x - 5 * f, by - 4);
-    ctx.quadraticCurveTo(x - 18 * f - lean, by + 8, x - 8 * f, by + 18);
-    ctx.lineTo(x + 2 * f, by + 8);
-    ctx.fill();
+    softCape(x, by, f, lean, "#8b2030", flash, 20);
+    softClassAura(x, by, "#e07070", skillOn, "fire");
     drawHeroLegs(x, by, f, pal, flash, pose.phase === 1 ? 2 : 0);
     drawHeroTorso(x, by, lean, pal, flash, "armor");
-    // chest cross
+    // chest cross emblem
     ctx.strokeStyle = flash ? "#fff" : pal.accent;
     ctx.lineWidth = 2;
+    ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(x + lean * 0.4, by - 4);
-    ctx.lineTo(x + lean * 0.4, by + 4);
-    ctx.moveTo(x - 4 + lean * 0.4, by);
-    ctx.lineTo(x + 4 + lean * 0.4, by);
+    ctx.moveTo(x + lean * 0.4, by - 5);
+    ctx.lineTo(x + lean * 0.4, by + 5);
+    ctx.moveTo(x - 5 + lean * 0.4, by);
+    ctx.lineTo(x + 5 + lean * 0.4, by);
     ctx.stroke();
     drawHeroHead(x + lean * 0.4, by, f, pal, flash, { helm: true });
-    // zweihänder
     const ang = skillOn
-      ? Math.sin(elapsed * 22) * 1.4
+      ? Math.sin(elapsed * 20) * 1.35
       : weaponAngle(pose, 0.4 * f, -1.5 * f, -1.8 * f, 1.6 * f, 0.35 * f);
     ctx.save();
     ctx.translate(x + 10 * f + lean, by);
     ctx.rotate(ang);
-    ctx.fillStyle = flash ? "#fff" : "#8b5a2b";
-    ctx.fillRect(-2, 2, 4, 8);
-    ctx.fillStyle = flash ? "#fff" : pal.weapon;
-    ctx.fillRect(-2.5, -26, 5, 28);
-    ctx.fillStyle = flash ? "#fff" : pal.accent;
-    ctx.fillRect(-6, 0, 12, 3);
-    if (pose.phase === 1) drawTrailArc(0, 0, 22, -1.5, 0.8, "#ffe0a0", 0.35 * (1 - pose.p));
+    softGrip(9, "#8b5a2b", flash);
+    softBladeLocal(28, 5.5, pal.weapon, flash);
+    ctx.fillStyle = softCol(flash, pal.accent, 0.1);
+    ctx.fillRect(-7, -1, 14, 3.5);
+    if (pose.phase === 1) drawTrailArc(0, 0, 24, -1.5, 0.85, "#ffe0a0", 0.4 * (1 - pose.p));
     ctx.restore();
-    if (skillOn) {
-      ctx.strokeStyle = "rgba(224,112,112,0.5)";
-      ctx.beginPath();
-      ctx.arc(x, by, 20 + Math.sin(elapsed * 18) * 3, 0, Math.PI * 2);
-      ctx.stroke();
-    }
   }
 
   function drawArcherHero(x, y, f, bob, flash, skillOn, pose, pal) {
-    const by = y + Math.sin(bob) * 1.6;
+    const by = y + Math.sin(bob) * 0.7;
     const drawBack = pose.phase === 0 ? pose.p * 11 : pose.phase === 1 ? 1 : 0;
     drawShadow(x, y + 16, 12, 5);
-    ctx.fillStyle = flash ? "#fff" : pal.dark;
-    ctx.beginPath();
-    ctx.moveTo(x - 4 * f, by - 6);
-    ctx.quadraticCurveTo(x - 16 * f, by + 4, x - 6 * f, by + 18);
-    ctx.lineTo(x + 4 * f, by + 8);
-    ctx.fill();
+    softCape(x, by, f, 0, pal.dark, flash, 16);
+    softClassAura(x, by, pal.accent, skillOn, "default");
     drawHeroLegs(x, by, f, pal, flash, Math.sin(bob) > 0 ? 1 : 0);
     drawHeroTorso(x, by, 0, pal, flash, "armor");
-    // quiver
-    ctx.fillStyle = flash ? "#fff" : "#5a3a20";
-    ctx.fillRect(x - 12 * f, by - 8, 5, 14);
-    ctx.fillStyle = flash ? "#fff" : "#c0a060";
-    ctx.fillRect(x - 11 * f, by - 13, 1.5, 6);
-    ctx.fillRect(x - 9 * f, by - 12, 1.5, 5);
+    // quiver + arrows
+    ctx.fillStyle = softMetal(flash, "#5a3a20", x - 14 * f, by - 10, x - 6 * f, by + 8);
+    roundRect(x - 13 * f, by - 8, 5.5, 15, 2);
+    ctx.fill();
+    ctx.fillStyle = softCol(flash, "#c0a060", 0.15);
+    ctx.fillRect(x - 12 * f, by - 14, 1.6, 7);
+    ctx.fillRect(x - 9.5 * f, by - 13, 1.6, 6);
     drawHeroHead(x, by, f, pal, flash, { hood: true });
     ctx.save();
     ctx.translate(x + 11 * f, by);
     ctx.rotate(pose.phase === 0 ? -0.12 * f : pose.phase === 1 ? 0.12 * f : 0);
-    ctx.strokeStyle = flash ? "#fff" : pal.weapon;
-    ctx.lineWidth = 2.5;
+    // soft bow limb
+    ctx.strokeStyle = softMetal(flash, pal.weapon, -4, -12, 4, 12);
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.arc(0, 0, 12, -1.15, 1.15);
+    ctx.arc(0, 0, 13, -1.15, 1.15);
     ctx.stroke();
     const pull = -drawBack * f;
-    ctx.strokeStyle = "#ddd";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = flash ? "#fff" : "rgba(230,230,220,0.9)";
+    ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(Math.cos(-1.15) * 12, Math.sin(-1.15) * 12);
+    ctx.moveTo(Math.cos(-1.15) * 13, Math.sin(-1.15) * 13);
     ctx.lineTo(pull, 0);
-    ctx.lineTo(Math.cos(1.15) * 12, Math.sin(1.15) * 12);
+    ctx.lineTo(Math.cos(1.15) * 13, Math.sin(1.15) * 13);
     ctx.stroke();
     if (pose.phase !== 1) {
-      ctx.fillStyle = flash ? "#fff" : "#c8d8a0";
-      ctx.fillRect(pull, -1.2, 14, 2.4);
+      ctx.fillStyle = softMetal(flash, "#c8d8a0", pull, -2, 18, 2);
+      ctx.fillRect(pull, -1.3, 15, 2.6);
       ctx.beginPath();
-      ctx.moveTo(14, 0); ctx.lineTo(18, -3); ctx.lineTo(18, 3);
+      ctx.moveTo(pull + 15, 0); ctx.lineTo(pull + 20, -3.5); ctx.lineTo(pull + 20, 3.5);
       ctx.fill();
     } else {
       ctx.globalAlpha = 0.55 * (1 - pose.p);
       ctx.strokeStyle = pal.accent;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.moveTo(0, 0); ctx.lineTo(24 * f, 0);
+      ctx.moveTo(0, 0); ctx.lineTo(26 * f, 0);
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
@@ -7340,33 +7774,50 @@
   }
 
   function drawExterminatorHero(x, y, f, bob, flash, skillOn, pose, pal) {
-    const by = y + Math.sin(bob) * 1.2;
+    const by = y + Math.sin(bob) * 0.6;
     drawShadow(x, y + 16, 13, 5);
+    softClassAura(x, by, "#ff7040", skillOn, "fire");
     drawHeroLegs(x, by, f, pal, flash, 0);
     drawHeroTorso(x, by, 0, pal, flash, "armor");
-    // tank straps
-    ctx.strokeStyle = flash ? "#fff" : "#3a2818";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x - 8, by - 6, 6, 12);
-    ctx.fillStyle = flash ? "#fff" : "#ff6030";
-    ctx.fillRect(x - 7, by - 2, 4, 6);
+    // fuel tank
+    if (!flash && window.HOT_ART && window.HOT_ART.softCapsule) {
+      window.HOT_ART.softCapsule(ctx, x - 10, by - 8, 8, 14, "#3a2818");
+    } else {
+      ctx.fillStyle = flash ? "#fff" : "#3a2818";
+      ctx.fillRect(x - 10, by - 8, 8, 14);
+    }
+    ctx.fillStyle = softCol(flash, "#ff6030", 0.2);
+    ctx.fillRect(x - 8.5, by - 2, 5, 6);
+    // pilot light
+    ctx.globalAlpha = 0.7 + Math.sin(elapsed * 12) * 0.2;
+    ctx.fillStyle = "#ffd060";
+    ctx.beginPath();
+    ctx.arc(x - 6, by + 5, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
     drawHeroHead(x, by, f, pal, flash, { helm: true });
-    // flamethrower
     const lift = pose.phase === 0 ? -pose.p * 6 : pose.phase === 1 ? -2 : 0;
     ctx.save();
     ctx.translate(x + 12 * f, by + lift);
     ctx.rotate(0.1 * f + (pose.phase === 1 ? 0.15 * f : 0));
-    ctx.fillStyle = flash ? "#fff" : pal.weapon;
-    ctx.fillRect(-2, -4, 18, 6);
-    ctx.fillStyle = flash ? "#fff" : "#303840";
-    ctx.fillRect(14, -5, 6, 8);
+    ctx.fillStyle = softMetal(flash, pal.weapon, -2, -5, 20, 5);
+    roundRect(-2, -4, 20, 7, 2);
+    ctx.fill();
+    ctx.fillStyle = softCol(flash, "#303840", -0.1);
+    roundRect(15, -5.5, 7, 9, 2);
+    ctx.fill();
     if (pose.phase === 1 || skillOn) {
-      for (let i = 0; i < 5; i++) {
-        ctx.globalAlpha = 0.5 * (1 - i / 5) * (pose.phase === 1 ? 1 - pose.p * 0.3 : 0.7);
-        ctx.fillStyle = i % 2 ? "#ffd040" : "#ff6020";
-        ctx.beginPath();
-        ctx.ellipse(22 + i * 8, Math.sin(elapsed * 20 + i) * 3, 6 + i, 4 + i * 0.5, 0, 0, Math.PI * 2);
-        ctx.fill();
+      for (let i = 0; i < 6; i++) {
+        ctx.globalAlpha = 0.55 * (1 - i / 6) * (pose.phase === 1 ? 1 - pose.p * 0.25 : 0.75);
+        const col = i % 2 ? "#ffd040" : "#ff6020";
+        if (window.HOT_ART) {
+          window.HOT_ART.drawSoftParticle(ctx, 22 + i * 7, Math.sin(elapsed * 18 + i) * 3.5, 5 + i * 0.8, col, 1);
+        } else {
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.ellipse(22 + i * 7, Math.sin(elapsed * 18 + i) * 3, 6 + i, 4 + i * 0.4, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
       ctx.globalAlpha = 1;
     }
@@ -7375,205 +7826,235 @@
 
   function drawClericHero(x, y, f, bob, flash, skillOn, pose, pal) {
     const lean = pose.phase === 1 ? 3 * f : 0;
-    const by = y + Math.sin(bob) * 1.1;
+    const by = y + Math.sin(bob) * 0.6;
     drawShadow(x, y + 16, 13, 5);
+    softClassAura(x, by, "#f0d080", skillOn, "holy");
     drawHeroLegs(x, by, f, pal, flash, 0);
     drawHeroTorso(x, by, lean, pal, flash, "robe");
     drawHeroHead(x + lean * 0.3, by, f, pal, flash, { crown: true });
-    // scepter
     const ang = weaponAngle(pose, 0.2 * f, -0.8 * f, -1.0 * f, 1.0 * f, 0.2 * f);
     ctx.save();
     ctx.translate(x + 12 * f + lean, by);
     ctx.rotate(ang);
-    ctx.fillStyle = flash ? "#fff" : "#8b6a30";
-    ctx.fillRect(-1.5, -22, 3, 28);
-    ctx.fillStyle = flash ? "#fff" : pal.accent;
-    ctx.beginPath();
-    ctx.arc(0, -26, 5, 0, Math.PI * 2);
-    ctx.fill();
+    softGrip(26, "#8b6a30", flash);
+    softOrbLocal(-26, 5.5, pal.accent, flash);
+    // cross on orb
+    if (!flash) {
+      ctx.strokeStyle = "#fff8d0";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(0, -30); ctx.lineTo(0, -22);
+      ctx.moveTo(-3.5, -26); ctx.lineTo(3.5, -26);
+      ctx.stroke();
+    }
     if (pose.phase === 1) {
       ctx.globalAlpha = 0.4 * (1 - pose.p);
       ctx.fillStyle = "#fff6c0";
       ctx.beginPath();
-      ctx.arc(0, -26, 12 + pose.p * 8, 0, Math.PI * 2);
+      ctx.arc(0, -26, 14 + pose.p * 10, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
     }
     ctx.restore();
-    if (skillOn) {
-      ctx.strokeStyle = "rgba(240,224,160,0.45)";
-      ctx.beginPath();
-      ctx.arc(x, by, 22 + Math.sin(elapsed * 8) * 2, 0, Math.PI * 2);
-      ctx.stroke();
-    }
   }
 
   function drawWarlockHero(x, y, f, bob, flash, skillOn, pose, pal) {
-    const by = y + Math.sin(bob) * 1.3;
+    const by = y + Math.sin(bob) * 0.7;
     drawShadow(x, y + 16, 13, 5);
-    // tattered cape
-    ctx.fillStyle = flash ? "#fff" : "#2a1038";
-    ctx.beginPath();
-    ctx.moveTo(x - 4 * f, by - 4);
-    ctx.quadraticCurveTo(x - 18 * f, by + 2, x - 10 * f, by + 18);
-    ctx.lineTo(x + 2 * f, by + 6);
-    ctx.fill();
+    softCape(x, by, f, 0, "#2a1038", flash, 19);
+    softClassAura(x, by, pal.accent, skillOn, "void");
     drawHeroLegs(x, by, f, pal, flash, 0);
     drawHeroTorso(x, by, 0, pal, flash, "robe");
     drawHeroHead(x, by, f, pal, flash, { hood: true, glowEyes: true });
-    // skull staff / cast hand
     const raise = pose.phase === 0 ? pose.p * 10 : pose.phase === 1 ? 8 : 2;
     ctx.save();
     ctx.translate(x + 12 * f, by + 2 - raise);
-    ctx.fillStyle = flash ? "#fff" : "#4a3050";
-    ctx.fillRect(-1.5, -16, 3, 22);
-    ctx.fillStyle = flash ? "#fff" : "#e0d0c0";
-    ctx.beginPath();
-    ctx.arc(0, -20, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#200";
-    ctx.fillRect(-2, -21, 1.5, 1.5);
-    ctx.fillRect(1, -21, 1.5, 1.5);
+    softGrip(20, "#4a3050", flash);
+    softOrbLocal(-20, 4.5, "#e0d0c0", flash);
+    ctx.fillStyle = "#1a0810";
+    ctx.fillRect(-2.2, -21.5, 1.6, 1.6);
+    ctx.fillRect(0.8, -21.5, 1.6, 1.6);
     ctx.restore();
-    // orbiting specters
-    const n = pose.phase >= 0 ? 4 : 2;
+    const n = pose.phase >= 0 ? 5 : 3;
     for (let i = 0; i < n; i++) {
-      const a = elapsed * (2.5 + (pose.phase === 1 ? 3 : 0)) + (i / n) * Math.PI * 2;
-      const ox = x + Math.cos(a) * (18 + (pose.phase === 1 ? 6 : 0));
-      const oy = by - 2 + Math.sin(a) * 8;
-      ctx.globalAlpha = 0.55;
-      ctx.fillStyle = pal.accent;
-      ctx.beginPath();
-      ctx.arc(ox, oy, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
+      const a = elapsed * (2.4 + (pose.phase === 1 ? 3 : 0)) + (i / n) * Math.PI * 2;
+      const ox = x + Math.cos(a) * (18 + (pose.phase === 1 ? 7 : 0));
+      const oy = by - 2 + Math.sin(a) * 9;
+      if (window.HOT_ART && window.HOT_ART.softDisc) {
+        ctx.globalAlpha = 0.75;
+        window.HOT_ART.softDisc(ctx, ox, oy, 3.5, pal.accent, softCol(false, pal.accent, 0.3));
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.globalAlpha = 0.55;
+        ctx.fillStyle = pal.accent;
+        ctx.beginPath();
+        ctx.arc(ox, oy, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
     }
   }
 
   function drawSorceressHero(x, y, f, bob, flash, skillOn, pose, pal) {
-    const by = y + Math.sin(bob) * 1.2;
+    const by = y + Math.sin(bob) * 0.65;
     const staffLift = pose.phase === 0 ? pose.p * 10 : pose.phase === 1 ? 8 : 2;
     drawShadow(x, y + 16, 13, 5);
+    softClassAura(x, by, "#80b0ff", skillOn, "ice");
     drawHeroLegs(x, by, f, pal, flash, 0);
     drawHeroTorso(x, by, 0, pal, flash, "robe");
     drawHeroHead(x, by, f, pal, flash, { hood: true, glowEyes: true });
     ctx.save();
     ctx.translate(x + 13 * f, by + 2 - staffLift);
     ctx.rotate(pose.phase === 0 ? -0.4 * f * pose.p : -0.25 * f);
-    ctx.fillStyle = flash ? "#fff" : pal.weapon;
-    ctx.fillRect(-1.5, -22, 3, 30);
-    ctx.globalAlpha = pose.phase === 1 ? 1 : 0.7 + Math.sin(elapsed * 6) * 0.3;
-    ctx.fillStyle = flash ? "#fff" : "#a0d0ff";
+    softGrip(28, pal.weapon, flash);
+    // crystal tip
+    ctx.globalAlpha = pose.phase === 1 ? 1 : 0.75 + Math.sin(elapsed * 6) * 0.2;
+    if (!flash && window.HOT_ART) {
+      const g = ctx.createLinearGradient(-4, -30, 4, -14);
+      g.addColorStop(0, "#e0f0ff");
+      g.addColorStop(1, "#60a0ff");
+      ctx.fillStyle = g;
+    } else {
+      ctx.fillStyle = flash ? "#fff" : "#a0d0ff";
+    }
     ctx.beginPath();
-    ctx.moveTo(0, -28); ctx.lineTo(5, -22); ctx.lineTo(0, -16); ctx.lineTo(-5, -22);
+    ctx.moveTo(0, -30); ctx.lineTo(5.5, -22); ctx.lineTo(0, -14); ctx.lineTo(-5.5, -22);
     ctx.fill();
     if (pose.phase === 1) {
       ctx.globalAlpha = 0.35 * (1 - pose.p);
       ctx.beginPath();
-      ctx.arc(0, -22, 14 + pose.p * 10, 0, Math.PI * 2);
+      ctx.arc(0, -22, 14 + pose.p * 12, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
     ctx.restore();
     const spd = pose.phase === 1 ? 7 : 2.5;
-    for (let i = 0; i < 3; i++) {
-      const a = elapsed * spd + (i / 3) * Math.PI * 2;
-      ctx.fillStyle = "rgba(120,180,255,0.4)";
-      ctx.beginPath();
-      ctx.arc(x + Math.cos(a) * 16, by - 2 + Math.sin(a) * 6, 4, 0, Math.PI * 2);
-      ctx.fill();
+    for (let i = 0; i < 4; i++) {
+      const a = elapsed * spd + (i / 4) * Math.PI * 2;
+      const ox = x + Math.cos(a) * 17;
+      const oy = by - 2 + Math.sin(a) * 7;
+      if (window.HOT_ART && window.HOT_ART.drawSoftParticle) {
+        window.HOT_ART.drawSoftParticle(ctx, ox, oy, 3.5, "#90c0ff", 0.7);
+      } else {
+        ctx.fillStyle = "rgba(120,180,255,0.45)";
+        ctx.beginPath();
+        ctx.arc(ox, oy, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
 
   function drawShieldMaidenHero(x, y, f, bob, flash, skillOn, pose, pal) {
     const lean = pose.phase === 0 ? -2 * f : pose.phase === 1 ? 4 * f : 0;
-    const by = y + Math.sin(bob) * 1.0;
+    const by = y + Math.sin(bob) * 0.55;
     drawShadow(x, y + 16, 14, 5);
+    softClassAura(x, by, pal.accent, skillOn, "holy");
     drawHeroLegs(x, by, f, pal, flash, 0);
     drawHeroTorso(x, by, lean, pal, flash, "armor");
     drawHeroHead(x + lean * 0.3, by, f, pal, flash, { helm: true });
-    // shield
+    // kite shield soft
     const shx = pose.phase === 1 ? 14 * f : -12 * f;
-    ctx.fillStyle = flash ? "#fff" : pal.armor;
+    const sx = x + shx + lean;
+    const sy = by + 2;
+    if (!flash && window.HOT_ART) {
+      const g = ctx.createLinearGradient(sx - 8, sy - 12, sx + 8, sy + 12);
+      g.addColorStop(0, window.HOT_ART.shade(pal.armor, 0.25));
+      g.addColorStop(1, window.HOT_ART.shade(pal.armor, -0.2));
+      ctx.fillStyle = g;
+    } else {
+      ctx.fillStyle = flash ? "#fff" : pal.armor;
+    }
     ctx.beginPath();
-    ctx.ellipse(x + shx + lean, by + 2, 7, 11, 0, 0, Math.PI * 2);
+    ctx.moveTo(sx, sy - 12);
+    ctx.lineTo(sx + 8, sy - 4);
+    ctx.lineTo(sx + 6, sy + 10);
+    ctx.lineTo(sx, sy + 14);
+    ctx.lineTo(sx - 6, sy + 10);
+    ctx.lineTo(sx - 8, sy - 4);
+    ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = pal.accent;
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = softCol(flash, pal.accent, 0.1);
+    ctx.lineWidth = 1.6;
     ctx.stroke();
     // hammer
     const ang = weaponAngle(pose, 0.5 * f, -1.4 * f, -1.7 * f, 1.5 * f, 0.4 * f);
     ctx.save();
     ctx.translate(x + 12 * f + lean, by);
     ctx.rotate(ang);
-    ctx.fillStyle = flash ? "#fff" : "#5a4030";
-    ctx.fillRect(-2, -4, 4, 18);
-    ctx.fillStyle = flash ? "#fff" : pal.weapon;
-    ctx.fillRect(-7, -14, 14, 10);
-    if (pose.phase === 1) drawTrailArc(0, 0, 18, -1.4, 0.6, "#d0d8e8", 0.4 * (1 - pose.p));
+    softGrip(16, "#5a4030", flash);
+    ctx.fillStyle = softMetal(flash, pal.weapon, -8, -16, 8, -2);
+    roundRect(-8, -15, 16, 11, 2);
+    ctx.fill();
+    if (pose.phase === 1) drawTrailArc(0, 0, 20, -1.4, 0.65, "#d0d8e8", 0.42 * (1 - pose.p));
     ctx.restore();
   }
 
   function drawBeastHuntressHero(x, y, f, bob, flash, skillOn, pose, pal) {
-    const by = y + Math.sin(bob) * 1.7;
+    const by = y + Math.sin(bob) * 0.75;
     drawShadow(x, y + 16, 12, 5);
-    // cloak
-    ctx.fillStyle = flash ? "#fff" : pal.dark;
-    ctx.beginPath();
-    ctx.moveTo(x - 4 * f, by - 6);
-    ctx.quadraticCurveTo(x - 14 * f, by + 6, x - 6 * f, by + 17);
-    ctx.lineTo(x + 3 * f, by + 6);
-    ctx.fill();
+    softCape(x, by, f, 0, pal.dark, flash, 15);
+    softClassAura(x, by, pal.accent, skillOn, "default");
     drawHeroLegs(x, by, f, pal, flash, pose.phase === 1 ? 2 : 0);
     drawHeroTorso(x, by, 0, pal, flash, "armor");
     drawHeroHead(x, by, f, pal, flash, { hood: true });
-    // spear
     const throwOff = pose.phase === 1 ? pose.p * 16 * f : pose.phase === 0 ? -pose.p * 4 * f : 0;
     const ang = pose.phase === 0 ? -0.5 * f - pose.p * 0.3 * f : pose.phase === 1 ? 0.1 * f : 0.25 * f;
     ctx.save();
     ctx.translate(x + 10 * f + throwOff, by);
     ctx.rotate(ang);
-    ctx.fillStyle = flash ? "#fff" : pal.weapon;
-    ctx.fillRect(-1.5, -22, 3, 34);
-    ctx.fillStyle = flash ? "#fff" : "#c0c8d0";
+    softGrip(30, pal.weapon, flash);
+    // spear tip
+    ctx.fillStyle = softMetal(flash, "#c0c8d0", -4, -30, 4, -18);
     ctx.beginPath();
-    ctx.moveTo(0, -28); ctx.lineTo(4, -20); ctx.lineTo(-4, -20);
+    ctx.moveTo(0, -30); ctx.lineTo(4.5, -20); ctx.lineTo(-4.5, -20);
     ctx.fill();
     if (pose.phase === 1) {
       ctx.globalAlpha = 0.4 * (1 - pose.p);
       ctx.strokeStyle = pal.accent;
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(0, 0); ctx.lineTo(20 * f, -4);
+      ctx.moveTo(0, 0); ctx.lineTo(22 * f, -4);
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
     ctx.restore();
-    // tiny hound silhouette when skill
     if (skillOn) {
-      ctx.fillStyle = "rgba(160,100,40,0.7)";
-      ctx.beginPath();
-      ctx.ellipse(x - 18 * f, by + 8, 8, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
+      // soft hound companion
+      const hx = x - 18 * f;
+      const hy = by + 8;
+      if (window.HOT_ART && window.HOT_ART.softCapsule) {
+        window.HOT_ART.softCapsule(ctx, hx - 9, hy - 4, 14, 7, "#a06838");
+        window.HOT_ART.softDisc(ctx, hx + 7, hy - 3, 4, "#a06838", "#c08850");
+      } else {
+        ctx.fillStyle = "rgba(160,100,40,0.85)";
+        ctx.beginPath();
+        ctx.ellipse(hx, hy, 9, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
 
   function drawNorsemanHero(x, y, f, bob, flash, skillOn, pose, pal) {
-    const by = y + Math.sin(bob) * 1.4;
+    const by = y + Math.sin(bob) * 0.7;
     drawShadow(x, y + 16, 13, 5);
-    ctx.fillStyle = flash ? "#fff" : "#d8d8e0";
-    ctx.beginPath();
-    ctx.moveTo(x - 6 * f, by - 4);
-    ctx.quadraticCurveTo(x - 16 * f, by + 6, x - 8 * f, by + 16);
-    ctx.lineTo(x + 4 * f, by + 6);
-    ctx.fill();
+    softCape(x, by, f, 0, "#d0d4e0", flash, 17);
+    softClassAura(x, by, "#80c0e0", skillOn, "ice");
     drawHeroLegs(x, by, f, pal, flash, pose.phase === 1 ? 1 : 0);
     drawHeroTorso(x, by, 0, pal, flash, "armor");
+    // horned helm extra
     drawHeroHead(x, by, f, pal, flash, { beard: true, helm: true });
-    // dual axes — left + right, mirrored swing
-    const sides = [
-      { sx: -11, sign: -1 },
-      { sx: 11, sign: 1 },
-    ];
+    if (!flash) {
+      ctx.strokeStyle = pal.accent;
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(x - 6, by - 18);
+      ctx.quadraticCurveTo(x - 11, by - 26, x - 8, by - 28);
+      ctx.moveTo(x + 6, by - 18);
+      ctx.quadraticCurveTo(x + 11, by - 26, x + 8, by - 28);
+      ctx.stroke();
+    }
+    const sides = [{ sx: -11, sign: -1 }, { sx: 11, sign: 1 }];
     for (const { sx, sign } of sides) {
       let ang;
       if (pose.phase === 0) ang = (-0.4 - pose.p * 1.0) * sign * f;
@@ -7583,88 +8064,101 @@
       ctx.save();
       ctx.translate(x + sx * f, by + (sign < 0 ? 2 : 0));
       ctx.rotate(ang);
-      ctx.fillStyle = flash ? "#fff" : "#6a4a28";
-      ctx.fillRect(-1.5, -2, 3, 14);
-      ctx.fillStyle = flash ? "#fff" : pal.weapon;
+      softGrip(12, "#6a4a28", flash);
+      ctx.fillStyle = softMetal(flash, pal.weapon, -8, -14, 8, 0);
       ctx.beginPath();
-      ctx.moveTo(-7, -2); ctx.lineTo(7, -2); ctx.lineTo(0, -13);
+      ctx.moveTo(-8, -1); ctx.lineTo(8, -1); ctx.lineTo(0, -14);
       ctx.fill();
       ctx.restore();
     }
-    if (pose.phase === 1) {
-      drawTrailArc(x, by, 20, -0.5, 1.2, "#a0d0e8", 0.3 * (1 - pose.p));
-    }
-    if (skillOn) {
-      ctx.strokeStyle = "rgba(128,192,224,0.45)";
-      ctx.beginPath();
-      ctx.arc(x, by, 24, 0, Math.PI * 2);
-      ctx.stroke();
-    }
+    if (pose.phase === 1) drawTrailArc(x, by, 22, -0.55, 1.25, "#a0d0e8", 0.35 * (1 - pose.p));
   }
 
   function drawLandsknechtHero(x, y, f, bob, flash, skillOn, pose, pal) {
-    const by = y + Math.sin(bob) * 1.0;
+    const by = y + Math.sin(bob) * 0.55;
     drawShadow(x, y + 16, 12, 5);
+    softClassAura(x, by, pal.accent, skillOn, "default");
     drawHeroLegs(x, by, f, pal, flash, 0);
     drawHeroTorso(x, by, 0, pal, flash, "armor");
-    // plume hat
     drawHeroHead(x, by, f, pal, flash, { hat: true });
-    ctx.fillStyle = flash ? "#fff" : "#e04040";
+    // soft plume
+    ctx.fillStyle = softCol(flash, "#e04040", 0.1);
     ctx.beginPath();
     ctx.moveTo(x + 2, by - 24);
-    ctx.quadraticCurveTo(x + 10 * f, by - 32, x + 4 * f, by - 18);
+    ctx.quadraticCurveTo(x + 12 * f, by - 34, x + 5 * f, by - 17);
+    ctx.quadraticCurveTo(x + 6 * f, by - 26, x + 2, by - 24);
     ctx.fill();
-    // arquebus
     const kick = pose.phase === 1 ? -3 * f * (1 - pose.p) : 0;
     const aim = pose.phase === 0 ? -0.15 * f - pose.p * 0.05 * f : 0;
     ctx.save();
     ctx.translate(x + 8 * f + kick, by + 2);
     ctx.rotate(aim);
-    ctx.fillStyle = flash ? "#fff" : pal.weapon;
-    ctx.fillRect(-4, -2, 26, 4);
-    ctx.fillStyle = flash ? "#fff" : "#5a4030";
-    ctx.fillRect(-6, 0, 8, 6);
+    // arquebus barrel
+    ctx.fillStyle = softMetal(flash, pal.weapon, -4, -3, 28, 3);
+    roundRect(-4, -2.5, 28, 5, 1.5);
+    ctx.fill();
+    ctx.fillStyle = softCol(flash, "#5a4030", -0.05);
+    roundRect(-7, -1, 9, 7, 2);
+    ctx.fill();
     if (pose.phase === 1) {
-      ctx.globalAlpha = 0.7 * (1 - pose.p);
-      ctx.fillStyle = "#ffe080";
-      ctx.beginPath();
-      ctx.arc(24, 0, 5 + pose.p * 6, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.globalAlpha = 0.75 * (1 - pose.p);
+      if (window.HOT_ART && window.HOT_ART.drawSoftParticle) {
+        window.HOT_ART.drawSoftParticle(ctx, 26, 0, 7 + pose.p * 8, "#ffe080", 1);
+        window.HOT_ART.drawSoftParticle(ctx, 32, -2, 4, "#ffc060", 0.7);
+      } else {
+        ctx.fillStyle = "#ffe080";
+        ctx.beginPath();
+        ctx.arc(26, 0, 6 + pose.p * 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.globalAlpha = 1;
     }
     ctx.restore();
   }
 
   function drawSageHero(x, y, f, bob, flash, skillOn, pose, pal) {
-    const by = y + Math.sin(bob) * 1.1;
+    const by = y + Math.sin(bob) * 0.6;
     drawShadow(x, y + 16, 12, 5);
+    softClassAura(x, by, pal.accent, skillOn, "void");
     drawHeroLegs(x, by, f, pal, flash, 0);
     drawHeroTorso(x, by, 0, pal, flash, "robe");
     drawHeroHead(x, by, f, pal, flash, { hood: true, glowEyes: true, crown: true });
-    // floating runes
-    const n = 5;
+    const n = 6;
     for (let i = 0; i < n; i++) {
       const a = elapsed * 1.8 + (i / n) * Math.PI * 2;
-      const r = 20 + (pose.phase === 1 ? 8 : 0);
+      const r = 20 + (pose.phase === 1 ? 9 : 0);
       const ox = x + Math.cos(a) * r;
       const oy = by - 4 + Math.sin(a) * 10;
-      ctx.fillStyle = flash ? "#fff" : pal.accent;
-      ctx.globalAlpha = 0.7;
-      ctx.fillRect(ox - 2, oy - 2, 4, 4);
-      ctx.globalAlpha = 1;
-    }
-    // cast hands
-    if (pose.phase >= 0) {
-      ctx.fillStyle = flash ? "#fff" : pal.skin;
+      ctx.save();
+      ctx.translate(ox, oy);
+      ctx.rotate(a);
+      ctx.globalAlpha = 0.75;
+      ctx.fillStyle = softCol(flash, pal.accent, 0.15);
+      // diamond runes
       ctx.beginPath();
-      ctx.arc(x + 10 * f, by - (pose.phase === 1 ? 4 : 0), 3, 0, Math.PI * 2);
+      ctx.moveTo(0, -3.5); ctx.lineTo(3, 0); ctx.lineTo(0, 3.5); ctx.lineTo(-3, 0);
       ctx.fill();
+      ctx.restore();
+    }
+    if (pose.phase >= 0) {
+      if (!flash && window.HOT_ART && window.HOT_ART.softDisc) {
+        window.HOT_ART.softDisc(ctx, x + 10 * f, by - (pose.phase === 1 ? 4 : 0), 3.2, pal.skin, softCol(false, pal.skin, 0.2));
+      } else {
+        ctx.fillStyle = flash ? "#fff" : pal.skin;
+        ctx.beginPath();
+        ctx.arc(x + 10 * f, by - (pose.phase === 1 ? 4 : 0), 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
       if (pose.phase === 1) {
         ctx.globalAlpha = 0.4 * (1 - pose.p);
-        ctx.fillStyle = pal.accent;
-        ctx.beginPath();
-        ctx.arc(x + 14 * f, by - 2, 10 + pose.p * 8, 0, Math.PI * 2);
-        ctx.fill();
+        if (window.HOT_ART && window.HOT_ART.softCastBurst) {
+          window.HOT_ART.softCastBurst(ctx, x + 14 * f, by - 2, pal.accent, pose.p, 0.55);
+        } else {
+          ctx.fillStyle = pal.accent;
+          ctx.beginPath();
+          ctx.arc(x + 14 * f, by - 2, 10 + pose.p * 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.globalAlpha = 1;
       }
     }
@@ -7672,121 +8166,161 @@
 
   function drawBardHero(x, y, f, bob, flash, skillOn, pose, pal) {
     const lean = pose.phase === 1 ? 3 * f : 0;
-    const by = y + Math.sin(bob) * 2.0;
+    const by = y + Math.sin(bob) * 0.9;
     drawShadow(x, y + 16, 12, 5);
-    // flamboyant cape
-    ctx.fillStyle = flash ? "#fff" : pal.dark;
-    ctx.beginPath();
-    ctx.moveTo(x - 4 * f, by - 6);
-    ctx.quadraticCurveTo(x - 18 * f, by, x - 8 * f, by + 18);
-    ctx.lineTo(x + 4 * f, by + 6);
-    ctx.fill();
+    softCape(x, by, f, lean, pal.dark, flash, 18);
+    softClassAura(x, by, pal.accent, skillOn, "default");
     drawHeroLegs(x, by, f, pal, flash, Math.abs(Math.sin(bob)) > 0.5 ? 2 : 0);
     drawHeroTorso(x, by, lean, pal, flash, "armor");
     drawHeroHead(x + lean * 0.3, by, f, pal, flash, { hat: true });
-    // lute
     const ang = weaponAngle(pose, 0.3 * f, -0.6 * f, -0.9 * f, 1.1 * f, 0.3 * f);
     ctx.save();
     ctx.translate(x + 10 * f + lean, by + 2);
     ctx.rotate(ang);
-    ctx.fillStyle = flash ? "#fff" : pal.weapon;
+    // lute body soft
+    if (!flash && window.HOT_ART) {
+      const g = ctx.createRadialGradient(-2, 3, 1, 0, 4, 10);
+      g.addColorStop(0, window.HOT_ART.shade(pal.weapon, 0.25));
+      g.addColorStop(1, window.HOT_ART.shade(pal.weapon, -0.15));
+      ctx.fillStyle = g;
+    } else {
+      ctx.fillStyle = flash ? "#fff" : pal.weapon;
+    }
     ctx.beginPath();
-    ctx.ellipse(0, 4, 7, 9, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 4, 7.5, 9.5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillRect(-1.5, -12, 3, 14);
-    ctx.strokeStyle = "#eee";
-    ctx.lineWidth = 0.8;
+    softGrip(14, "#6a4a28", flash);
+    ctx.strokeStyle = flash ? "#fff" : "rgba(240,230,200,0.85)";
+    ctx.lineWidth = 0.9;
     ctx.beginPath();
-    ctx.moveTo(-2, -10); ctx.lineTo(-2, 8);
-    ctx.moveTo(2, -10); ctx.lineTo(2, 8);
+    ctx.moveTo(-2.2, -10); ctx.lineTo(-2.2, 9);
+    ctx.moveTo(2.2, -10); ctx.lineTo(2.2, 9);
     ctx.stroke();
-    if (pose.phase === 1) {
-      // music notes
-      ctx.globalAlpha = 0.6 * (1 - pose.p);
+    if (pose.phase === 1 || skillOn) {
+      ctx.globalAlpha = 0.65 * (pose.phase === 1 ? 1 - pose.p : 0.7);
       ctx.fillStyle = pal.accent;
-      ctx.font = "12px serif";
-      ctx.fillText("♪", 10, -8 - pose.p * 10);
-      ctx.fillText("♫", 16, -2 - pose.p * 8);
+      ctx.font = "bold 13px Segoe UI";
+      ctx.fillText("♪", 10, -10 - (pose.phase === 1 ? pose.p * 12 : Math.sin(elapsed * 6) * 4));
+      ctx.fillText("♫", 18, -2 - (pose.phase === 1 ? pose.p * 10 : Math.cos(elapsed * 5) * 3));
+      // sound waves
+      ctx.strokeStyle = pal.accent;
+      ctx.lineWidth = 1.5;
+      for (let i = 1; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.arc(6, 0, 10 + i * 6 + Math.sin(elapsed * 8) * 2, -0.6, 0.6);
+        ctx.stroke();
+      }
       ctx.globalAlpha = 1;
     }
     ctx.restore();
   }
 
   function drawCroneHero(x, y, f, bob, flash, skillOn, pose, pal) {
-    const by = y + Math.sin(bob) * 1.0;
+    const by = y + Math.sin(bob) * 0.55;
     drawShadow(x, y + 16, 13, 5);
+    softClassAura(x, by, pal.accent, skillOn, "default");
     drawHeroLegs(x, by, f, pal, flash, 0);
     drawHeroTorso(x, by, 0, pal, flash, "robe");
     drawHeroHead(x, by, f, pal, flash, { hood: true });
-    // gnarled staff
     ctx.save();
     ctx.translate(x + 12 * f, by);
     ctx.rotate(pose.phase === 0 ? -0.3 * f * pose.p : pose.phase === 1 ? 0.2 * f : 0.1 * f);
-    ctx.strokeStyle = flash ? "#fff" : "#4a3820";
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = softMetal(flash, "#4a3820", -4, -20, 4, 10);
+    ctx.lineWidth = 3.2;
+    ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(0, 10);
-    ctx.quadraticCurveTo(-4, -4, 2, -20);
+    ctx.quadraticCurveTo(-5, -4, 2, -20);
     ctx.stroke();
-    ctx.fillStyle = flash ? "#fff" : pal.accent;
-    ctx.beginPath();
-    ctx.arc(2, -22, 4, 0, Math.PI * 2);
-    ctx.fill();
+    softOrbLocal(-22, 4.5, pal.accent, flash);
+    // leaf on staff
+    if (!flash) {
+      ctx.fillStyle = "#50a040";
+      ctx.beginPath();
+      ctx.ellipse(5, -18, 4, 2.5, 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
-    // bog plants orbit
     const n = 4;
     for (let i = 0; i < n; i++) {
       const a = elapsed * 1.5 + (i / n) * Math.PI * 2 + (pose.phase === 1 ? pose.p : 0);
       const r = 22 + (pose.phase === 1 ? 6 : 0);
       const ox = x + Math.cos(a) * r;
       const oy = by + 4 + Math.sin(a) * 8;
-      ctx.fillStyle = flash ? "#fff" : "#3a6828";
-      ctx.fillRect(ox - 2, oy - 8, 4, 10);
-      ctx.fillStyle = flash ? "#fff" : pal.accent;
-      ctx.beginPath();
-      ctx.ellipse(ox, oy - 10, 5, 4, 0, 0, Math.PI * 2);
-      ctx.fill();
+      if (window.HOT_ART && window.HOT_ART.softCapsule) {
+        window.HOT_ART.softCapsule(ctx, ox - 2, oy - 8, 4, 10, "#3a6828");
+        window.HOT_ART.softDisc(ctx, ox, oy - 10, 4.5, pal.accent, softCol(false, pal.accent, 0.2));
+      } else {
+        ctx.fillStyle = flash ? "#fff" : "#3a6828";
+        ctx.fillRect(ox - 2, oy - 8, 4, 10);
+        ctx.fillStyle = flash ? "#fff" : pal.accent;
+        ctx.beginPath();
+        ctx.ellipse(ox, oy - 10, 5, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
 
   function drawAlchemistHero(x, y, f, bob, flash, skillOn, pose, pal) {
-    const by = y + Math.sin(bob) * 1.2;
+    const by = y + Math.sin(bob) * 0.65;
     drawShadow(x, y + 16, 12, 5);
+    softClassAura(x, by, pal.accent, skillOn, "default");
     drawHeroLegs(x, by, f, pal, flash, 0);
     drawHeroTorso(x, by, 0, pal, flash, "robe");
-    // goggles
     drawHeroHead(x, by, f, pal, flash, {});
-    ctx.strokeStyle = flash ? "#fff" : "#80c0b0";
-    ctx.lineWidth = 2;
+    // soft goggles
+    ctx.strokeStyle = softCol(flash, "#80c0b0", 0.15);
+    ctx.lineWidth = 2.2;
     ctx.beginPath();
-    ctx.arc(x - 3, by - 12, 3.5, 0, Math.PI * 2);
-    ctx.arc(x + 3, by - 12, 3.5, 0, Math.PI * 2);
+    ctx.arc(x - 3.2, by - 12, 3.8, 0, Math.PI * 2);
+    ctx.arc(x + 3.2, by - 12, 3.8, 0, Math.PI * 2);
     ctx.stroke();
-    // belt flasks
+    ctx.strokeStyle = softCol(flash, "#60a090", 0);
+    ctx.beginPath();
+    ctx.moveTo(x - 0.2, by - 12);
+    ctx.lineTo(x + 0.2, by - 12);
+    ctx.stroke();
     const cols = ["#ff6040", "#40a0ff", "#80e0ff", "#80c040"];
     for (let i = 0; i < 3; i++) {
-      ctx.fillStyle = flash ? "#fff" : cols[i];
-      ctx.fillRect(x - 8 + i * 6, by + 4, 4, 6);
+      const fx = x - 8 + i * 6;
+      if (!flash && window.HOT_ART && window.HOT_ART.softCapsule) {
+        window.HOT_ART.softCapsule(ctx, fx, by + 3, 4.5, 7, cols[i]);
+      } else {
+        ctx.fillStyle = flash ? "#fff" : cols[i];
+        ctx.fillRect(fx, by + 4, 4, 6);
+      }
     }
-    // throw flask
     const throwX = pose.phase === 1 ? pose.p * 14 * f : pose.phase === 0 ? -pose.p * 4 * f : 0;
     const throwY = pose.phase === 0 ? -pose.p * 8 : pose.phase === 1 ? -6 + pose.p * 10 : 0;
     ctx.save();
     ctx.translate(x + 12 * f + throwX, by + throwY);
     ctx.rotate(elapsed * (pose.phase === 1 ? 8 : 1));
-    ctx.fillStyle = flash ? "#fff" : cols[Math.floor(elapsed * 2) % 4];
+    const fc = cols[Math.floor(elapsed * 2) % 4];
+    if (!flash && window.HOT_ART) {
+      const g = ctx.createLinearGradient(0, -8, 0, 5);
+      g.addColorStop(0, "#fff");
+      g.addColorStop(0.3, fc);
+      g.addColorStop(1, softCol(false, fc, -0.2));
+      ctx.fillStyle = g;
+    } else {
+      ctx.fillStyle = flash ? "#fff" : fc;
+    }
     ctx.beginPath();
-    ctx.moveTo(0, -6); ctx.lineTo(4, 4); ctx.lineTo(-4, 4);
+    ctx.moveTo(0, -7); ctx.lineTo(4.5, 5); ctx.lineTo(-4.5, 5);
     ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.5)";
-    ctx.fillRect(-1.5, -8, 3, 4);
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.fillRect(-1.6, -9, 3.2, 4);
     ctx.restore();
     if (pose.phase === 1) {
-      ctx.globalAlpha = 0.35 * (1 - pose.p);
-      ctx.strokeStyle = pal.accent;
-      ctx.beginPath();
-      ctx.arc(x + 16 * f, by, 12 + pose.p * 10, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.globalAlpha = 0.4 * (1 - pose.p);
+      if (window.HOT_ART && window.HOT_ART.drawSoftAoe) {
+        window.HOT_ART.drawSoftAoe(ctx, x + 16 * f, by, 14 + pose.p * 12, pal.accent, 0.5, "burst");
+      } else {
+        ctx.strokeStyle = pal.accent;
+        ctx.beginPath();
+        ctx.arc(x + 16 * f, by, 12 + pose.p * 10, 0, Math.PI * 2);
+        ctx.stroke();
+      }
       ctx.globalAlpha = 1;
     }
   }
@@ -7812,43 +8346,51 @@
     const px = player.x - camera.x;
     const py = player.y - camera.y;
     const blink = player.invuln > 0 && Math.floor(player.invuln * 20) % 2 === 0;
-    if (blink) return;
 
-    const flash = player.atk.active && player.atk.phase === 1 && player.atk.progress < 0.12;
-    const skillOn = player.skillActive > 0;
-    const bob = player.atk.active ? (player.bob || 0) * 0.25 : (player.bob || 0);
-    const facing = player.facing || 1;
-    const pose = atkPose();
-    const pals = heroPalettes();
-    const pal = pals[player.classId] || {
-      skin: "#e8c8a0", armor: player.color, accent: player.color, dark: "#2a2030", weapon: "#aaa",
-    };
+    if (!blink) {
+      const flash = player.atk.active && player.atk.phase === 1 && player.atk.progress < 0.12;
+      const skillOn = player.skillActive > 0;
+      const bob = player.atk.active ? (player.bob || 0) * 0.25 : (player.bob || 0);
+      const facing = player.facing || 1;
+      const pose = atkPose();
+      const pals = heroPalettes();
+      const pal = pals[player.classId] || {
+        skin: "#e8c8a0", armor: player.color, accent: player.color, dark: "#2a2030", weapon: "#aaa",
+      };
 
-    // Vector soft combat (design system) — no pixel sprites
-    const drawer = HERO_DRAWERS[player.classId];
-    if (drawer) {
-      drawer(px, py, facing, bob * 0.35, flash, skillOn, pose, pal);
-    } else {
-      drawSwordsmanHero(px, py, facing, bob * 0.35, flash, skillOn, pose, pal);
+      // Vector soft combat — class-specific soft drawers (skill aura inside each)
+      const drawer = HERO_DRAWERS[player.classId];
+      if (drawer) {
+        drawer(px, py, facing, bob * 0.28, flash, skillOn, pose, pal);
+      } else {
+        drawSwordsmanHero(px, py, facing, bob * 0.28, flash, skillOn, pose, pal);
+      }
+
+      // name tag
+      ctx.font = "bold 10px Segoe UI";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      ctx.fillText(player.name, px + 1, py - 36);
+      ctx.fillStyle = player.color;
+      ctx.fillText(player.name, px, py - 37);
+
+      // subtle melee range for close-range heroes
+      const meleeStyles = ["melee", "hammer", "dualaxe", "lute", "scepter"];
+      if (meleeStyles.includes(player.style)) {
+        ctx.strokeStyle = "rgba(255,255,255,0.06)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(px, py, player.attackRange * (player.meleeArc || 1.1), 0, Math.PI * 2);
+        ctx.stroke();
+      }
     }
 
-    // name tag
-    ctx.font = "bold 10px Segoe UI";
-    ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.fillText(player.name, px + 1, py - 36);
-    ctx.fillStyle = player.color;
-    ctx.fillText(player.name, px, py - 37);
-
-    // subtle melee range for close-range heroes
-    const meleeStyles = ["melee", "hammer", "dualaxe", "lute", "scepter"];
-    if (meleeStyles.includes(player.style)) {
-      ctx.strokeStyle = "rgba(255,255,255,0.06)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(px, py, player.attackRange * (player.meleeArc || 1.1), 0, Math.PI * 2);
-      ctx.stroke();
-    }
+    // Thanh máu nhỏ đi theo hero (luôn hiện, kể cả nháy invuln)
+    const pct = player.maxHp > 0 ? clamp(player.hp / player.maxHp, 0, 1) : 0;
+    const barW = 28;
+    const barH = 4;
+    const barY = py - 28;
+    drawHpBar(px, barY, barW, barH, pct, pct > 0.35 ? "#c23b3b" : "#e05030");
   }
 
   /** Grunt: claw swipe attack frames */
@@ -8442,6 +8984,26 @@
 
     const spr = e.sprite || (ENEMY_BASE[e.type] && ENEMY_BASE[e.type].sprite) || "imp";
     drawTypedEnemy(x, y, e, facing, spr);
+    // Attack telegraph (windup) — vòng đỏ mờ trước đòn
+    const pose = enemyAtkPose(e);
+    if (pose.phase === 0) {
+      const aim = player ? Math.atan2(player.y - e.y, player.x - e.x) : 0;
+      const pulse = 0.25 + pose.p * 0.45 + Math.sin(elapsed * 14) * 0.06;
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      ctx.strokeStyle = e.isBoss ? "#ff6080" : "#e05050";
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.arc(x, y, (e.r || 14) + 10 + pose.p * 6, aim - 0.7, aim + 0.7);
+      ctx.stroke();
+      ctx.globalAlpha = pulse * 0.2;
+      ctx.fillStyle = "#ff4060";
+      ctx.beginPath();
+      ctx.arc(x, y, (e.r || 14) + 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
     drawStatusAuras(e, x, y);
 
     if (e.isChampion) {
@@ -9058,50 +9620,92 @@
       const x = (fx.x != null ? fx.x : 0) - camera.x;
       const y = (fx.y != null ? fx.y : 0) - camera.y;
       ctx.globalAlpha = Math.max(0, alpha);
+      const col = fx.color || "#8ab4ff";
 
       if (fx.kind === "lightning_bolt") {
         const x0 = fx.x0 - camera.x;
         const y0 = fx.y0 - camera.y;
         const x1 = fx.x1 - camera.x;
         const y1 = fx.y1 - camera.y;
-        ctx.strokeStyle = fx.color;
-        ctx.lineWidth = 3;
-        ctx.shadowColor = fx.color;
-        ctx.shadowBlur = 12;
-        ctx.beginPath();
-        ctx.moveTo(x0, y0);
-        const segs = 6;
-        for (let i = 1; i <= segs; i++) {
+        // soft multi-pass bolt (no shadowBlur)
+        const segs = 7;
+        const pts = [[x0, y0]];
+        for (let i = 1; i < segs; i++) {
           const u = i / segs;
-          const jx = (Math.random() - 0.5) * 18 * (i < segs ? 1 : 0);
-          ctx.lineTo(x0 + (x1 - x0) * u + jx, y0 + (y1 - y0) * u);
+          pts.push([
+            x0 + (x1 - x0) * u + (Math.random() - 0.5) * 16,
+            y0 + (y1 - y0) * u + (Math.random() - 0.5) * 8,
+          ]);
         }
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = "#fff";
+        pts.push([x1, y1]);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.globalAlpha = alpha * 0.35;
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 9;
         ctx.beginPath();
-        ctx.arc(x1, y1, 8 * alpha, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+        ctx.stroke();
+        ctx.globalAlpha = alpha * 0.9;
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+        ctx.stroke();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.2;
+        ctx.globalAlpha = alpha * 0.85;
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+        ctx.stroke();
+        if (window.HOT_ART && window.HOT_ART.drawSoftParticle) {
+          window.HOT_ART.drawSoftParticle(ctx, x1, y1, 10 * alpha, col, alpha);
+          window.HOT_ART.drawSoftParticle(ctx, x1, y1, 5 * alpha, "#fff", alpha * 0.8);
+        } else {
+          ctx.fillStyle = "#fff";
+          ctx.beginPath();
+          ctx.arc(x1, y1, 8 * alpha, 0, Math.PI * 2);
+          ctx.fill();
+        }
       } else if (fx.kind === "meteor_fall") {
         const fall = 1 - alpha;
         const my = y - 120 + fall * 120;
-        ctx.fillStyle = fx.color;
-        ctx.beginPath();
-        ctx.arc(x, my, 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "#ffd080";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(x, my - 20);
-        ctx.lineTo(x - 6, my - 40);
-        ctx.lineTo(x + 6, my - 40);
-        ctx.stroke();
-        if (fall > 0.7) {
-          ctx.globalAlpha = (fall - 0.7) / 0.3 * alpha;
-          ctx.fillStyle = fx.color;
+        // trail
+        if (window.HOT_ART) {
+          const g = ctx.createLinearGradient(x, my - 40, x, my + 4);
+          g.addColorStop(0, "transparent");
+          g.addColorStop(0.5, window.HOT_ART.hexA("#ffd080", alpha * 0.5));
+          g.addColorStop(1, window.HOT_ART.hexA(col, alpha * 0.85));
+          ctx.fillStyle = g;
           ctx.beginPath();
-          ctx.arc(x, y, 20 + fall * 30, 0, Math.PI * 2);
+          ctx.moveTo(x - 5, my);
+          ctx.lineTo(x + 5, my);
+          ctx.lineTo(x + 2, my - 42);
+          ctx.lineTo(x - 2, my - 42);
           ctx.fill();
+        }
+        if (window.HOT_ART && window.HOT_ART.softDisc) {
+          window.HOT_ART.softDisc(ctx, x, my, 8, col, "#ffe0a0");
+        } else {
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.arc(x, my, 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (fall > 0.65) {
+          const a = ((fall - 0.65) / 0.35) * alpha;
+          if (window.HOT_ART && window.HOT_ART.drawSoftAoe) {
+            window.HOT_ART.drawSoftAoe(ctx, x, y, 18 + fall * 36, col, a * 0.8, "burst");
+          } else {
+            ctx.globalAlpha = a;
+            ctx.fillStyle = col;
+            ctx.beginPath();
+            ctx.arc(x, y, 20 + fall * 30, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
       } else if (fx.kind === "flame_cone") {
         const aim = fx.aim || 0;
@@ -9237,49 +9841,95 @@
         ctx.ellipse(x, y, r * 0.6, r * 0.2, t * 2, 0, Math.PI * 2);
         ctx.fill();
       } else if (fx.kind === "vines") {
-        ctx.strokeStyle = fx.color;
-        ctx.lineWidth = 2;
-        for (let i = 0; i < 5; i++) {
-          const a = (i / 5) * Math.PI * 2;
+        ctx.lineCap = "round";
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          const ex = x + Math.cos(a) * (28 + t * 22);
+          const ey = y + Math.sin(a) * (28 + t * 22);
+          ctx.globalAlpha = alpha * 0.75;
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 3.2;
           ctx.beginPath();
           ctx.moveTo(x, y);
           ctx.quadraticCurveTo(
-            x + Math.cos(a + 0.5) * 20 * t,
-            y + Math.sin(a + 0.5) * 20 * t,
-            x + Math.cos(a) * (25 + t * 20),
-            y + Math.sin(a) * (25 + t * 20)
+            x + Math.cos(a + 0.55) * 22 * t,
+            y + Math.sin(a + 0.55) * 22 * t,
+            ex, ey
           );
           ctx.stroke();
+          if (window.HOT_ART && window.HOT_ART.drawSoftParticle) {
+            window.HOT_ART.drawSoftParticle(ctx, ex, ey, 3.5, col, alpha * 0.7);
+          }
         }
       } else if (fx.kind === "fists") {
         const f = fx.facing || 1;
-        ctx.fillStyle = fx.color;
-        ctx.globalAlpha = alpha * 0.8;
-        ctx.beginPath();
-        ctx.arc(x + 18 * f * t, y - 4, 10, 0, Math.PI * 2);
-        ctx.arc(x - 14 * f * t, y + 6, 9, 0, Math.PI * 2);
-        ctx.fill();
+        const x1 = x + 18 * f * t;
+        const y1 = y - 4;
+        const x2 = x - 14 * f * t;
+        const y2 = y + 6;
+        if (window.HOT_ART && window.HOT_ART.softDisc) {
+          ctx.globalAlpha = alpha * 0.35;
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.arc(x1, y1, 16, 0, Math.PI * 2);
+          ctx.arc(x2, y2, 14, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          window.HOT_ART.softDisc(ctx, x1, y1, 10, col, "#ffe0f0");
+          window.HOT_ART.softDisc(ctx, x2, y2, 9, col, "#ffe0f0");
+        } else {
+          ctx.fillStyle = col;
+          ctx.globalAlpha = alpha * 0.8;
+          ctx.beginPath();
+          ctx.arc(x1, y1, 10, 0, Math.PI * 2);
+          ctx.arc(x2, y2, 9, 0, Math.PI * 2);
+          ctx.fill();
+        }
       } else if (fx.kind === "confetti") {
         const cols = ["#ff80c0", "#80ffc0", "#80c0ff", "#ffe080", "#ff8080"];
-        for (let i = 0; i < 16; i++) {
-          const a = (i / 16) * Math.PI * 2;
-          const d = t * 50 + (i % 4) * 6;
-          ctx.fillStyle = cols[i % cols.length];
-          ctx.globalAlpha = alpha;
-          ctx.beginPath();
-          ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, 2.2, 0, Math.PI * 2);
-          ctx.fill();
+        for (let i = 0; i < 18; i++) {
+          const a = (i / 18) * Math.PI * 2 + t;
+          const d = t * 52 + (i % 4) * 6;
+          const px = x + Math.cos(a) * d;
+          const py = y + Math.sin(a) * d;
+          if (window.HOT_ART && window.HOT_ART.drawSoftParticle) {
+            window.HOT_ART.drawSoftParticle(ctx, px, py, 2.8, cols[i % cols.length], alpha);
+          } else {
+            ctx.fillStyle = cols[i % cols.length];
+            ctx.globalAlpha = alpha;
+            ctx.beginPath();
+            ctx.arc(px, py, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
       } else if (fx.kind === "sound_wave" || fx.kind === "arrow_volley" || fx.kind === "needles_burst") {
         const aim = fx.aim != null ? fx.aim : (fx.facing > 0 ? 0 : Math.PI);
-        ctx.strokeStyle = fx.color;
         ctx.lineCap = "round";
-        for (let i = 1; i <= 3; i++) {
-          ctx.globalAlpha = alpha * (1 - i * 0.18);
-          ctx.lineWidth = 4 - i * 0.6;
+        for (let i = 1; i <= 4; i++) {
+          const rr = 12 + 16 * i * t;
+          ctx.globalAlpha = alpha * (1 - i * 0.16);
+          // soft outer glow stroke
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 7 - i;
           ctx.beginPath();
-          ctx.arc(x, y, 15 * i * t + 12, aim - 0.55, aim + 0.55);
+          ctx.arc(x, y, rr, aim - 0.6, aim + 0.6);
           ctx.stroke();
+          ctx.globalAlpha = alpha * (0.85 - i * 0.12);
+          ctx.strokeStyle = i === 1 ? "#ffffff" : col;
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.arc(x, y, rr, aim - 0.55, aim + 0.55);
+          ctx.stroke();
+        }
+        // needle tips on burst
+        if (fx.kind === "needles_burst" && window.HOT_ART && window.HOT_ART.drawSoftProjectile) {
+          for (let i = -2; i <= 2; i++) {
+            const a = aim + i * 0.18;
+            const d = 18 + t * 40;
+            window.HOT_ART.drawSoftProjectile(
+              ctx, x + Math.cos(a) * d, y + Math.sin(a) * d, a, 3.5, col, "shard"
+            );
+          }
         }
       } else if (fx.kind === "death_wall") {
         const f = fx.facing || 1;
@@ -9296,28 +9946,50 @@
           ctx.fillRect(x + 20 * f, y - 50, 14, 100);
         }
       } else if (fx.kind === "prism_burst") {
-        const el = (window.HOT_ART && window.HOT_ART.TOKENS.element) || {};
-        const cols = [el.fire || "#ff6040", el.lightning || "#40a0ff", el.ice || "#80e0ff", el.earth || "#80c040", el.magic || "#e080ff"];
-        for (let i = 0; i < 8; i++) {
-          const a = (i / 8) * Math.PI * 2;
-          ctx.strokeStyle = cols[i % cols.length];
-          ctx.globalAlpha = alpha * 0.85;
-          ctx.lineWidth = 2.5;
+        const elTok = (window.HOT_ART && window.HOT_ART.TOKENS.element) || {};
+        const cols = [elTok.fire || "#ff6040", elTok.lightning || "#40a0ff", elTok.ice || "#80e0ff", elTok.earth || "#80c040", elTok.magic || "#e080ff"];
+        for (let i = 0; i < 10; i++) {
+          const a = (i / 10) * Math.PI * 2 + t * 0.4;
+          const len = 28 + t * 55;
+          const c2 = cols[i % cols.length];
           ctx.lineCap = "round";
+          ctx.globalAlpha = alpha * 0.35;
+          ctx.strokeStyle = c2;
+          ctx.lineWidth = 6;
           ctx.beginPath();
           ctx.moveTo(x, y);
-          ctx.lineTo(x + Math.cos(a) * (30 + t * 50), y + Math.sin(a) * (30 + t * 50));
+          ctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
           ctx.stroke();
+          ctx.globalAlpha = alpha * 0.9;
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
+          ctx.stroke();
+          if (window.HOT_ART && window.HOT_ART.drawSoftParticle) {
+            window.HOT_ART.drawSoftParticle(
+              ctx, x + Math.cos(a) * len, y + Math.sin(a) * len, 3.5, c2, alpha
+            );
+          }
         }
       } else if (fx.kind === "electric_spark" || fx.kind === "summon_burst" || fx.kind === "cast_flash") {
         if (window.HOT_ART && window.HOT_ART.softCastBurst) {
-          window.HOT_ART.softCastBurst(ctx, x, y, fx.color, t, alpha);
+          window.HOT_ART.softCastBurst(ctx, x, y, col, t, alpha);
         } else {
-          ctx.fillStyle = fx.color;
+          ctx.fillStyle = col;
           ctx.globalAlpha = alpha * 0.5;
           ctx.beginPath();
           ctx.arc(x, y, 12 + t * 28, 0, Math.PI * 2);
           ctx.fill();
+        }
+        if (window.HOT_ART && window.HOT_ART.drawSoftParticle) {
+          for (let i = 0; i < 5; i++) {
+            const a = (i / 5) * Math.PI * 2 + t * 3;
+            window.HOT_ART.drawSoftParticle(
+              ctx, x + Math.cos(a) * (12 + t * 28), y + Math.sin(a) * (12 + t * 28),
+              2.5, col, alpha * 0.7
+            );
+          }
         }
       }
       ctx.globalAlpha = 1;
@@ -9678,11 +10350,12 @@
       const al = t.life / t.maxLife;
       const tx = t.x - camera.x;
       const ty = t.y - camera.y;
+      const sc = t.scale != null ? t.scale : 1;
       if (window.HOT_ART && window.HOT_ART.drawSoftFloatingText) {
-        window.HOT_ART.drawSoftFloatingText(ctx, t.text, tx, ty, t.color, al);
+        window.HOT_ART.drawSoftFloatingText(ctx, t.text, tx, ty, t.color, al, sc);
       } else {
         ctx.globalAlpha = al;
-        ctx.font = "bold 13px Segoe UI";
+        ctx.font = `bold ${Math.round(13 * sc)}px Segoe UI`;
         ctx.textAlign = "center";
         ctx.fillStyle = "rgba(0,0,0,0.55)";
         ctx.fillText(t.text, tx + 1, ty + 1);
@@ -9692,6 +10365,12 @@
       }
     }
     ctx.globalAlpha = 1;
+
+    // Crit / boss death screen flash
+    if (hitFlashScreen > 0.02) {
+      ctx.fillStyle = `rgba(255, 220, 160, ${hitFlashScreen * 0.18})`;
+      ctx.fillRect(0, 0, W, H);
+    }
 
     if (phase === "running" || phase === "intro") {
       const alive = enemies.filter((e) => !e.isBoss).length;
@@ -9758,10 +10437,16 @@
   }
 
   function loop(ts) {
-    const dt = Math.min(0.05, (ts - lastTs) / 1000);
+    let dt = Math.min(0.05, (ts - lastTs) / 1000);
     lastTs = ts;
-    if (screenShake > 0) screenShake = Math.max(0, screenShake - dt * 28);
-    if (state === "playing") {
+    if (hitFlashScreen > 0) hitFlashScreen = Math.max(0, hitFlashScreen - dt * 2.8);
+    if (hitstop > 0) {
+      hitstop = Math.max(0, hitstop - dt);
+      // freeze simulation briefly; still draw
+      dt = 0;
+    }
+    if (screenShake > 0) screenShake = Math.max(0, screenShake - Math.max(dt, 0.016) * 28);
+    if (state === "playing" && dt > 0) {
       pollGamepad(dt);
       update(dt);
     }
@@ -9781,10 +10466,12 @@
 
     if ((k === "escape" || k === "p") && state === "playing") {
       state = "pause";
+      sfx("pause");
       fillBuildSummary();
       showScreen("pause");
     } else if ((k === "escape" || k === "p") && state === "pause") {
       state = "playing";
+      sfx("ui");
       showScreen("game");
       lastTs = performance.now();
     } else if ((k === "escape" || k === "p") && state === "well") {

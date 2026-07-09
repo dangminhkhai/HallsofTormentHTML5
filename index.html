@@ -246,58 +246,68 @@
         <div class="boss-bar"><div id="boss-fill"></div></div>
       </div>
 
-      <aside id="status-panel" aria-label="Chỉ số nhân vật">
+      <aside id="status-panel" aria-label="Chỉ số nhân vật và trang bị">
         <div class="status-header">
           <span id="st-class">Anh hùng</span>
           <span id="st-level">Cấp 1</span>
         </div>
-        <div class="status-row">
-          <span class="st-label">Máu</span>
-          <span id="st-hp" class="st-val">100/100</span>
+        <div class="status-stats" id="status-stats">
+          <div class="status-row">
+            <span class="st-label">Máu</span>
+            <span id="st-hp" class="st-val">100/100</span>
+          </div>
+          <div class="status-row">
+            <span class="st-label">Sát thương</span>
+            <span id="st-atk" class="st-val">18</span>
+          </div>
+          <div class="status-row">
+            <span class="st-label">Tốc độ đánh</span>
+            <span id="st-asp" class="st-val">1.0/giây</span>
+          </div>
+          <div class="status-row">
+            <span class="st-label">Tốc độ di chuyển</span>
+            <span id="st-spd" class="st-val">145</span>
+          </div>
+          <div class="status-row">
+            <span class="st-label">Tầm đánh</span>
+            <span id="st-rng" class="st-val">78</span>
+          </div>
+          <div class="status-row">
+            <span class="st-label">Đa đòn / nón</span>
+            <span id="st-multi" class="st-val">1</span>
+          </div>
+          <div class="status-row">
+            <span class="st-label">Tỷ lệ chí mạng</span>
+            <span id="st-crit" class="st-val">20%</span>
+          </div>
+          <div class="status-row">
+            <span class="st-label">Sát thương chí mạng</span>
+            <span id="st-cdmg" class="st-val">+65%</span>
+          </div>
+          <div class="status-row">
+            <span class="st-label">Phòng thủ</span>
+            <span id="st-def" class="st-val">0</span>
+          </div>
+          <div class="status-row">
+            <span class="st-label">Sức chắn</span>
+            <span id="st-block" class="st-val">0</span>
+          </div>
+          <div class="status-row">
+            <span class="st-label">Lực đẩy</span>
+            <span id="st-force" class="st-val">1.00</span>
+          </div>
+          <div class="status-row">
+            <span class="st-label">Hệ số đa đòn</span>
+            <span id="st-multi-stat" class="st-val">1.00</span>
+          </div>
         </div>
-        <div class="status-row">
-          <span class="st-label">Sát thương</span>
-          <span id="st-atk" class="st-val">18</span>
-        </div>
-        <div class="status-row">
-          <span class="st-label">Tốc độ đánh</span>
-          <span id="st-asp" class="st-val">1.0/giây</span>
-        </div>
-        <div class="status-row">
-          <span class="st-label">Tốc độ di chuyển</span>
-          <span id="st-spd" class="st-val">145</span>
-        </div>
-        <div class="status-row">
-          <span class="st-label">Tầm đánh</span>
-          <span id="st-rng" class="st-val">78</span>
-        </div>
-        <div class="status-row">
-          <span class="st-label">Đa đòn / nón</span>
-          <span id="st-multi" class="st-val">1</span>
-        </div>
-        <div class="status-row">
-          <span class="st-label">Tỷ lệ chí mạng</span>
-          <span id="st-crit" class="st-val">20%</span>
-        </div>
-        <div class="status-row">
-          <span class="st-label">Sát thương chí mạng</span>
-          <span id="st-cdmg" class="st-val">+65%</span>
-        </div>
-        <div class="status-row">
-          <span class="st-label">Phòng thủ</span>
-          <span id="st-def" class="st-val">0</span>
-        </div>
-        <div class="status-row">
-          <span class="st-label">Sức chắn</span>
-          <span id="st-block" class="st-val">0</span>
-        </div>
-        <div class="status-row">
-          <span class="st-label">Lực đẩy</span>
-          <span id="st-force" class="st-val">1.00</span>
-        </div>
-        <div class="status-row">
-          <span class="st-label">Hệ số đa đòn</span>
-          <span id="st-multi-stat" class="st-val">1.00</span>
+        <div class="status-gear-block">
+          <div class="status-gear-header">
+            <span class="st-gear-title">TRANG BỊ</span>
+            <span id="item-count" class="st-gear-count">0/7</span>
+          </div>
+          <div id="item-hud" title="Trang bị đang đeo" class="item-hud"></div>
+          <p id="item-hud-empty" class="item-hud-empty">Chưa có trang bị · rương / Giếng</p>
         </div>
       </aside>
 
@@ -339,7 +349,6 @@
         </div>
         <div class="hud-right">
           <div id="ability-hud" title="Khả năng đang dùng"></div>
-          <div id="item-hud" title="Trang bị" class="item-hud"></div>
           <div class="hud-meta-row">
             <span id="gold-text">Vàng: 0</span>
             <span id="shards-hud">Mảnh: 0</span>
@@ -350,10 +359,10 @@
     </div>
 
     <div id="levelup" class="overlay hidden">
-      <div class="overlay-panel">
+      <div class="overlay-panel levelup-panel">
         <h2>LÊN CẤP!</h2>
         <p id="levelup-sub">Thuộc tính / Nâng cấp khả năng · <span style="color:#d4a84b">chọn 1</span></p>
-        <div id="upgrade-options" class="upgrade-grid"></div>
+        <div id="upgrade-options" class="upgrade-grid levelup-grid"></div>
         <div class="levelup-actions">
           <button type="button" id="btn-reroll" class="secondary">Gieo lại (25 Vàng)</button>
         </div>
@@ -371,9 +380,25 @@
     <div id="pause" class="overlay hidden">
       <div class="overlay-panel pause-panel">
         <h2>TẠM DỪNG</h2>
+        <p class="pause-hint"><kbd>Esc</kbd> / <kbd>P</kbd> tiếp tục · Cài đặt bên dưới</p>
         <div id="build-summary" class="build-summary" aria-label="Build hiện tại"></div>
-        <button id="btn-resume" type="button">Tiếp tục</button>
-        <button id="btn-menu" type="button" class="secondary">Về menu</button>
+
+        <section class="pause-settings" aria-label="Cài đặt">
+          <div class="roster-label pause-set-title">Cài đặt</div>
+          <div class="settings-row">
+            <label class="settings-label">Âm lượng <span id="pause-vol-label">55%</span>
+              <input type="range" id="pause-set-vol" min="0" max="100" value="55" />
+            </label>
+            <label class="chk-set"><input type="checkbox" id="pause-set-sfx" checked /> Hiệu ứng âm thanh</label>
+            <label class="chk-set"><input type="checkbox" id="pause-set-shake" checked /> Rung màn hình</label>
+            <label class="chk-set"><input type="checkbox" id="pause-set-gamepad" checked /> Tay cầm</label>
+          </div>
+        </section>
+
+        <div class="pause-actions">
+          <button id="btn-resume" type="button">Tiếp tục</button>
+          <button id="btn-menu" type="button" class="secondary">Về menu</button>
+        </div>
       </div>
     </div>
 

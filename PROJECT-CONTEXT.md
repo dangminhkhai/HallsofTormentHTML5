@@ -4,8 +4,8 @@ Tài liệu tổng hợp **toàn bộ ngữ cảnh dự án** từ quá trình p
 Mục tiêu: AI hoặc dev khác đọc file này là nắm được **game có gì**, **constraint gì**, **code nằm đâu**, **đừng làm gì**.
 
 **Cập nhật:** 2026-07-09 · **Repo:** https://github.com/dangminhkhai/HallsofTormentHTML5 · **Branch:** `main`  
-**Workspace local:** `C:\Users\khaiez\halls-of-torment\`  
-**Latest graphics commit (ví dụ):** `83108af` — soft combat art polish
+**Workspace local (máy hiện tại):** `C:\Users\Khai\halls-of-torment\`  
+**Ghi chú:** Vàng + mảnh bank **ngay khi nhặt**; pause Esc có cài đặt; icon item riêng + Giếng; hitstop/crit/telegraph.
 
 ---
 
@@ -264,7 +264,7 @@ Export chính (không sửa tên bừa bãi):
 ### Lệnh git thường dùng
 
 ```bash
-cd C:\Users\khaiez\halls-of-torment
+cd C:\Users\Khai\halls-of-torment
 git status
 git add <files>
 git commit -m "..."
@@ -278,32 +278,26 @@ Remote: `https://github.com/dangminhkhai/HallsofTormentHTML5.git`
 ## 10. Việc đã xong (tóm tắt hội thoại)
 
 - Full feature prototype: Hall/Torment, camp, marks, artifacts, U/R item packages
-- UI/UX menu + HUD polish
-- Việt hóa + full stats labels
-- Ability full list 1 screen, no filter
-- Reject pixel → implement **vector soft** system end-to-end combat
-- Soft: enemies, pickups, AOE, orbs, summons, chest/barrel/well, pillars, particles, HP bars, slash, projectiles, miniboss, status, cast FX, floor accents, floating text, HUD CSS
-- Git pushes: base upload → VI+soft system → soft combat polish (`83108af` và các commit trước)
+- UI/UX menu + HUD polish · Việt hóa · ability full list 1 màn
+- Vector soft combat (`HOT_ART`) · icon item riêng ~80 · status trang bị panel trái
+- Camp card layout fix · pause Esc + **Cài đặt**
+- **Bank ngay:** vàng + mảnh → `meta` / localStorage khi nhặt (out giữa run vẫn giữ)
+- Hit feel: hitstop, crit scale text, screen flash, slash/hit_heavy SFX
+- Enemy attack **telegraph** (windup) · boss death burst
+- Hero soft legs/torso + skill aura · SFX mở rộng (`slash`, `shard`, `boss_death`, …)
+- Pause build summary gọn + details
 
 ---
 
-## 11. Việc còn có thể nâng cấp (đã thảo luận với user)
+## 11. Việc còn có thể nâng cấp
 
-**Ưu tiên gợi ý (chưa chốt):**
-
-| Ưu tiên | Hạng mục | Ghi chú |
-|---------|----------|---------|
-| A | **Hero soft pass** | 14 drawers còn “cứng” so với enemy soft |
-| B | **Menu / level-up glass** | Đồng bộ design tokens ngoài combat |
-| C | **SFX** | `sfx.js` mỏng — hit/slash/level/chest |
-| D | **Gameplay feel** | hitstop, attack tell, crit floating scale |
-| — | Boss phase FX / death burst | |
-| — | Ability/item glyph chi tiết hơn | |
-| — | Tách module `game.js` | technical debt |
-| — | Mobile touch | optional |
-| — | Gỡ hoặc archive `sprites.js` | cleanup |
-
-User đã được hỏi hướng A/B/C/D; **chưa** chọn bước tiếp theo tại thời điểm ghi file này (sau khi `up git` + hỏi “còn nâng cấp gì”).
+| Hạng mục | Ghi chú |
+|----------|---------|
+| Hero drawers chi tiết hơn | 14 class vẫn có thể soft thêm vũ khí |
+| Mobile touch | optional |
+| Tách module `game.js` | technical debt (~370KB+) |
+| Archive `sprites.js` | không load trong index |
+| Balance Torment gần wiki | optional |
 
 ---
 

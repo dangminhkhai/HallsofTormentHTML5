@@ -4,6 +4,7 @@
  * Stats from each hero page; HP/DMG scaled for browser prototype.
  */
 
+/** @fileoverview Game data only — runtime in game.js; graphics in art.js / ability-icons.js */
 window.HOT_DATA = (() => {
   const HP = (v) => Math.round(v * 0.32);
   const DMG = (v) => Math.round(v * 0.18);
