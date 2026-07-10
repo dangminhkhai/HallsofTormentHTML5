@@ -12,8 +12,7 @@ No build step — `file://` works. All scripts are local.
 
 ## Play (Android offline)
 
-1. Build debug APK (see [`ANDROID.md`](./ANDROID.md)), or use a previously built file:
-   - `dist-apk/HallsOfTorment-debug.apk` (after `npm run build:apk`)
+1. Download **`dist-apk/HallsOfTorment-debug.apk`** from this repo (or rebuild — [`ANDROID.md`](./ANDROID.md)).
 2. Copy to phone → install (allow unknown sources).
 3. Play offline; progress is stored in the app WebView.
 

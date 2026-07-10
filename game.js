@@ -3023,8 +3023,12 @@
     el.upgradeOptions.classList.add("levelup-grid");
     const title = el.levelup && el.levelup.querySelector("h2");
     const sub = document.getElementById("levelup-sub") || (el.levelup && el.levelup.querySelector("p"));
+    const panel = el.levelup && el.levelup.querySelector(".levelup-panel");
+    if (panel) panel.classList.remove("chest-mode");
+    el.upgradeOptions.classList.remove("chest-grid");
     if (title) title.textContent = "LÊN CẤP!";
     if (sub) {
+      sub.className = "";
       sub.innerHTML =
         `<span class="lu-legend">` +
         `<span class="lu-leg" style="--c:#7ec850">Cơ bản</span>` +
@@ -3036,6 +3040,8 @@
         `</span>` +
         `<span class="lu-hint">Chọn <strong>1</strong> · <span style="color:#d4a84b">×2</span> = nhận gấp đôi · Gieo lại bằng vàng</span>`;
     }
+    const rerollBtn = document.getElementById("btn-reroll");
+    if (rerollBtn) rerollBtn.classList.remove("hidden");
 
     options.forEach((u, i) => {
       const meta = levelUpCatMeta(u);
@@ -3159,31 +3165,35 @@
     });
   }
 
-  /** Format ability stats for pick menu / HUD */
+  /** Format ability stats for pick menu / HUD — short label/value pairs for readable cards */
   function formatAbilityStatLines(def) {
     const lines = [];
-    if (def.damage != null) lines.push(`Sát thương ${Math.round(def.damage)}`);
+    if (def.damage != null) lines.push({ k: "ST", v: String(Math.round(def.damage)) });
     if (def.attackSpeed != null && def.type !== "orbit") {
-      lines.push(`Tốc độ đánh ${def.attackSpeed.toFixed(2)}/giây`);
-      lines.push(`Hồi chiêu ${(1 / Math.max(0.15, def.attackSpeed)).toFixed(2)} giây`);
+      lines.push({ k: "TĐĐ", v: `${def.attackSpeed.toFixed(2)}/s` });
+      lines.push({ k: "Hồi", v: `${(1 / Math.max(0.15, def.attackSpeed)).toFixed(2)}s` });
     }
     if (def.type === "orbit") {
-      lines.push(`Số quả cầu ${def.count || 1}`);
-      if (def.orbitRadius) lines.push(`Bán kính quỹ đạo ${def.orbitRadius}`);
-      if (def.orbitSpeed) lines.push(`Tốc độ quay ${def.orbitSpeed.toFixed(1)}`);
+      lines.push({ k: "Cầu", v: String(def.count || 1) });
+      if (def.orbitRadius) lines.push({ k: "Quỹ đạo", v: String(def.orbitRadius) });
+      if (def.orbitSpeed) lines.push({ k: "Quay", v: def.orbitSpeed.toFixed(1) });
     }
-    if (def.count != null && def.type !== "orbit") lines.push(`Số lượng ×${def.count}`);
-    if (def.pierce != null) lines.push(`Xuyên ${def.pierce}`);
-    if (def.range != null) lines.push(`Tầm đánh ${def.range}`);
-    if (def.aoe != null) lines.push(`Diện tích ${def.aoe}`);
-    if (def.critChance != null) lines.push(`Tỷ lệ chí mạng ${Math.round(def.critChance * 100)}%`);
-    if (def.critBonus != null) lines.push(`Sát thương chí mạng +${Math.round(def.critBonus * 100)}%`);
-    if (def.heal != null) lines.push(`Hồi máu ${def.heal}`);
+    if (def.count != null && def.type !== "orbit") lines.push({ k: "Số", v: `×${def.count}` });
+    if (def.pierce != null) lines.push({ k: "Xuyên", v: String(def.pierce) });
+    if (def.range != null) lines.push({ k: "Tầm", v: String(def.range) });
+    if (def.aoe != null) lines.push({ k: "Vùng", v: String(def.aoe) });
+    if (def.critChance != null) lines.push({ k: "CM", v: `${Math.round(def.critChance * 100)}%` });
+    if (def.critBonus != null) lines.push({ k: "ST CM", v: `+${Math.round(def.critBonus * 100)}%` });
+    if (def.heal != null) lines.push({ k: "Hồi máu", v: String(def.heal) });
     if (def.element) {
-      const elMap = { fire: "Lửa", lightning: "Sét", ice: "Băng", earth: "Đất", physical: "Vật lý", magic: "Phép thuật" };
-      lines.push(`Nguyên tố: ${elMap[def.element] || def.element}`);
+      const elMap = { fire: "Lửa", lightning: "Sét", ice: "Băng", earth: "Đất", physical: "Vật lý", magic: "Phép" };
+      lines.push({ k: "Hệ", v: elMap[def.element] || def.element });
     }
     return lines;
+  }
+
+  function abilityStatLinesText(def) {
+    return formatAbilityStatLines(def).map((s) => `${s.k} ${s.v}`).join(" · ");
   }
 
   function openAbilityUpgradePick() {
@@ -3258,49 +3268,83 @@
     const dm = abilityDmgMeta(dtype);
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "upgrade-btn ab-dmg-" + dtype + (fullCatalog ? " ab-full-card" : " pick-with-icon");
+    btn.className =
+      "upgrade-btn ab-pick-card ab-dmg-" + dtype +
+      (fullCatalog ? " ab-full-card" : " pick-with-icon");
     btn.dataset.dmg = dtype;
     const elemMap = { fire: "Lửa", lightning: "Sét", ice: "Băng", earth: "Đất", physical: "Vật lý", magic: "Phép thuật" };
     const elem = ab.element || "";
     const elemVi = elemMap[elem] || elem;
-    // Full grid: gọn hơn để vừa màn hình; 3-pick: đủ dòng
-    const stats = formatAbilityStatLines(ab).join(" · ");
+    const statPairs = formatAbilityStatLines(ab);
 
     const icon = document.createElement("canvas");
-    icon.className = "ability-icon";
-    const iconSize = fullCatalog ? 28 : 52;
+    icon.className = "ability-icon ab-pick-icon";
+    const iconSize = fullCatalog ? 28 : 56;
     if (typeof window.paintAbilityIcon === "function") {
       window.paintAbilityIcon(icon, ab.id, ab.color, iconSize);
     }
 
-    const badge = document.createElement("span");
-    badge.className = "ab-dmg-badge";
-    badge.style.color = dm.color;
-    badge.style.borderColor = dm.color;
-    badge.textContent = dm.label;
+    if (fullCatalog) {
+      // Compact catalog tile: icon + name + type badge
+      const badge = document.createElement("span");
+      badge.className = "ab-dmg-badge";
+      badge.style.color = dm.color;
+      badge.style.borderColor = dm.color;
+      badge.textContent = dm.short || dm.label;
+      const nameEl = document.createElement("strong");
+      nameEl.className = "ab-pick-name";
+      nameEl.style.color = ab.color;
+      nameEl.textContent = ab.name;
+      btn.appendChild(badge);
+      btn.appendChild(icon);
+      btn.appendChild(nameEl);
+    } else {
+      // 3-pick scroll/tome: structured card — easy to scan on mobile
+      const body = document.createElement("div");
+      body.className = "ab-pick-body";
 
-    const nameEl = document.createElement("strong");
-    nameEl.style.color = ab.color;
-    nameEl.textContent = ab.name;
+      const head = document.createElement("div");
+      head.className = "ab-pick-head";
+      const nameEl = document.createElement("strong");
+      nameEl.className = "ab-pick-name";
+      nameEl.style.color = ab.color;
+      nameEl.textContent = ab.name;
+      const badge = document.createElement("span");
+      badge.className = "ab-pick-type";
+      badge.style.color = dm.color;
+      badge.style.borderColor = dm.color;
+      badge.textContent = elemVi && elemVi !== dm.label
+        ? `${dm.label} · ${elemVi}`
+        : (dm.label || dtype);
+      head.appendChild(nameEl);
+      head.appendChild(badge);
 
-    const descEl = document.createElement("span");
-    descEl.textContent = ab.desc || ab.type;
+      const descEl = document.createElement("p");
+      descEl.className = "ab-pick-desc";
+      descEl.textContent = ab.desc || ab.type || "";
 
-    const statsEl = document.createElement("span");
-    statsEl.className = "ab-pick-stats";
-    // Full catalog: card chỉ icon+tên (không scroll); chỉ số đầy đủ trong tooltip
-    statsEl.textContent = fullCatalog
-      ? ""
-      : `${dm.label}${elemVi && elemVi !== dm.label ? " · " + elemVi : ""} · ${stats}`;
+      const statsEl = document.createElement("div");
+      statsEl.className = "ab-pick-stats";
+      for (const s of statPairs) {
+        const chip = document.createElement("span");
+        chip.className = "ab-stat-chip";
+        chip.innerHTML = `<i>${s.k}</i><b>${s.v}</b>`;
+        statsEl.appendChild(chip);
+      }
 
-    btn.appendChild(badge);
-    btn.appendChild(icon);
-    btn.appendChild(nameEl);
-    if (!fullCatalog) {
-      btn.appendChild(descEl);
-      btn.appendChild(statsEl);
+      body.appendChild(head);
+      body.appendChild(descEl);
+      if (statPairs.length) body.appendChild(statsEl);
+      btn.appendChild(icon);
+      btn.appendChild(body);
     }
-    btn.title = `${ab.name}\n${dm.label}${elemVi ? " · " + elemVi : ""}\n${ab.desc || ""}\n${formatAbilityStatLines(ab).join("\n")}`;
+
+    btn.title = [
+      ab.name,
+      `${dm.label}${elemVi ? " · " + elemVi : ""}`,
+      ab.desc || "",
+      abilityStatLinesText(ab),
+    ].filter(Boolean).join("\n");
     btn.addEventListener("click", () => {
       grantAbility(ab.id);
       sfx("click");
@@ -3553,7 +3597,7 @@
         chip.style.color = def.color;
         chip.textContent = def.name;
         const ups = (inst.upgradeIds || []).join(", ");
-        const stats = formatAbilityStatLines(resolveAbilityDef(inst) || def).join(" · ");
+        const stats = abilityStatLinesText(resolveAbilityDef(inst) || def);
         const dt = abilityDmgMeta(abilityDmgType(def));
         const elMap = { fire: "Lửa", lightning: "Sét", ice: "Băng", earth: "Đất", physical: "Vật lý", magic: "Phép thuật" };
         const eln = def.element ? (elMap[def.element] || def.element) : "";
@@ -3582,15 +3626,11 @@
               ? "Sẵn sàng"
               : `${(inst.cd || 0).toFixed(1)} giây`;
           const resolved = resolveAbilityDef(inst) || def;
-          const stats = formatAbilityStatLines(resolved);
+          const statPairs = formatAbilityStatLines(resolved).slice();
           const ups = (inst.upgradeIds || []).length;
-          if (ups) stats.push(`Nâng cấp ${ups}/${abilityUpgradeCap()}`);
-          const statHtml = stats
-            .map((line) => {
-              // Keep full label: split on first space after multi-word Vietnamese is hard —
-              // show whole line as value under a generic icon
-              return `<span class="ab-stat-full"><b>${line}</b></span>`;
-            })
+          if (ups) statPairs.push({ k: "Nâng", v: `${ups}/${abilityUpgradeCap()}` });
+          const statHtml = statPairs
+            .map((s) => `<span class="ab-stat-full"><i>${s.k}</i> <b>${s.v}</b></span>`)
             .join("");
           const head = document.createElement("div");
           head.className = "ab-card-head";
@@ -6225,6 +6265,9 @@
     levelUpMode = "item_chest";
     sfx("chest");
     el.upgradeOptions.innerHTML = "";
+    el.upgradeOptions.classList.add("levelup-grid", "chest-grid");
+    const panel = el.levelup && el.levelup.querySelector(".levelup-panel");
+    if (panel) panel.classList.add("chest-mode");
     const title = el.levelup && el.levelup.querySelector("h2");
     const sub = document.getElementById("levelup-sub") || (el.levelup && el.levelup.querySelector("p"));
     if (title) {
@@ -6232,17 +6275,15 @@
         cr >= 3 ? "RƯƠNG CHÚA TỂ" : cr >= 2 ? "RƯƠNG TINH ANH" : "RƯƠNG TRANG BỊ";
     }
     if (sub) {
-      const best = options.reduce((m, o) => {
-        const rank = { rare: 2, uncommon: 1, common: 0 };
-        return (rank[o.rarity] || 0) > (rank[m] || 0) ? o.rarity : m;
-      }, "common");
-      const bestLab = rarityMeta(best).label || best;
-      const bestCol = rarityMeta(best).color || "#d4a84b";
+      // Compact hint + tiny rarity key in top-right (not a full-width wall of text)
+      sub.className = "chest-sub";
       sub.innerHTML =
-        `Chọn 1 · có <strong style="color:${bestCol}">${bestLab}</strong> trở lên · ` +
-        `<span style="color:#a0a8b0">Thường</span> / ` +
-        `<span style="color:#50c070">Hiếm vừa ▲</span> / ` +
-        `<span style="color:#c080e0">Cực hiếm ◆</span>`;
+        `<span class="chest-pick-hint">Chọn <strong>1</strong> món</span>` +
+        `<span class="chest-rar-legend" aria-label="Độ hiếm">` +
+        `<span class="crl crl-c">Thường</span>` +
+        `<span class="crl crl-u">▲ Hiếm vừa</span>` +
+        `<span class="crl crl-r">◆ Cực hiếm</span>` +
+        `</span>`;
     }
     options.forEach((opt) => {
       const itemId = opt.id;
@@ -6250,9 +6291,10 @@
       if (!it) return;
       const rm = rarityMeta(opt.rarity);
       const slotLab = (ITEM_SLOT_LABELS && ITEM_SLOT_LABELS[it.slot]) || it.slot || "";
+      const rar = opt.rarity || "common";
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "upgrade-btn pick-with-icon rar-" + (opt.rarity || "common");
+      btn.className = "upgrade-btn pick-with-icon chest-card rar-" + rar;
       const icon = document.createElement("canvas");
       icon.className = "pick-icon ability-icon";
       try {
@@ -6263,39 +6305,53 @@
         console.warn("paintItemSlotIcon", itemId, err);
       }
       const body = document.createElement("div");
-      body.className = "pick-body";
-      const titleEl = document.createElement("strong");
-      titleEl.style.color = rm.color || it.color;
-      const rarMark = opt.rarity === "rare" ? "◆ " : opt.rarity === "uncommon" ? "▲ " : "";
-      titleEl.innerHTML =
-        `${rarMark}${it.name}` +
-        `<span class="rar-badge rar-badge-${opt.rarity || "common"}" style="color:${rm.color || it.color};border-color:${rm.color || it.color}">` +
-        `${rm.label || ""}</span>`;
+      body.className = "pick-body chest-card-body";
+
+      const head = document.createElement("div");
+      head.className = "chest-card-head";
+      const nameEl = document.createElement("strong");
+      nameEl.className = "chest-item-name";
+      nameEl.style.color = rm.color || it.color;
+      nameEl.textContent = it.name;
+      const badge = document.createElement("span");
+      badge.className = "rar-badge rar-badge-" + rar + " chest-rar-corner";
+      badge.style.color = rm.color || it.color;
+      badge.style.borderColor = rm.color || it.color;
+      badge.textContent = rm.label || rar;
+      head.appendChild(nameEl);
+      head.appendChild(badge);
+
       const metaEl = document.createElement("span");
-      metaEl.style.color = rm.color || it.color;
-      metaEl.textContent =
-        opt.rarity === "rare"
-          ? `${slotLab} · Cực hiếm: Boost + Sinh trưởng`
-          : opt.rarity === "uncommon"
-            ? `${slotLab} · Hiếm vừa: Boost mạnh hơn Thường`
-            : `${slotLab} · Thường`;
+      metaEl.className = "chest-item-meta";
+      metaEl.style.color = rm.color || "var(--muted)";
+      metaEl.textContent = slotLab;
+
       const descEl = document.createElement("span");
-      descEl.textContent = itemDescFor(it, opt.rarity);
-      body.appendChild(titleEl);
+      descEl.className = "chest-item-desc";
+      descEl.textContent = itemDescFor(it, rar);
+
+      body.appendChild(head);
       body.appendChild(metaEl);
       body.appendChild(descEl);
       btn.appendChild(icon);
       btn.appendChild(body);
       btn.addEventListener("click", () => {
-        equipItem(itemId, opt.rarity);
-        toast(`${rarMark}${it.name} · ${rm.label || opt.rarity}`, "good", 1600);
+        equipItem(itemId, rar);
+        const mark = rar === "rare" ? "◆ " : rar === "uncommon" ? "▲ " : "";
+        toast(`${mark}${it.name} · ${rm.label || rar}`, "good", 1600);
         sfx("pickup");
+        if (panel) panel.classList.remove("chest-mode");
+        if (sub) sub.className = "";
+        el.upgradeOptions.classList.remove("chest-grid");
         state = "playing";
         showScreen("game");
         lastTs = performance.now();
       });
       el.upgradeOptions.appendChild(btn);
     });
+    // Hide reroll on chest pick
+    const reroll = document.getElementById("btn-reroll");
+    if (reroll) reroll.classList.add("hidden");
     updateRerollButton();
     showScreen("levelup");
   }
@@ -7128,15 +7184,14 @@
     const hasJoy = Math.abs(joyX) > 0.001 || Math.abs(joyY) > 0.001;
     const hasGp = Math.abs(gpX) > 0.001 || Math.abs(gpY) > 0.001;
     if (hasJoy) {
-      // Mobile virtual stick wins — pure analog, no keyboard blend
+      // Mobile stick: vector length 0..1 maps to 0..100% of hero run speed
+      // (full tilt already normalized to 1 in applyJoyVector)
       mx = joyX;
       my = joyY;
-      // Soft floor: very small inputs still move (avoid sticky stop while kiting)
       const jLen = Math.hypot(mx, my);
-      if (jLen > 0.02 && jLen < 0.12) {
-        const boost = 0.12 / jLen;
-        mx *= boost;
-        my *= boost;
+      if (jLen > 1) {
+        mx /= jLen;
+        my /= jLen;
       }
     } else {
       let digX = 0;
@@ -7174,14 +7229,16 @@
       player._visionRangeMul = 1.15;
     } else player._visionRangeMul = 1;
 
+    // moveMul stacks skill / chill / items on top of base hero.speed
     const moveMul = (player.skillActive > 0 && player.skillId === "ringblades" ? 1.15 : 1) * chillMul * itemMs;
     const moveMag = Math.hypot(mx, my);
     player.moving = moveMag > 0.02;
     if (player.moving) {
-      // Keep analog magnitude (0..1) — do NOT re-normalize to full speed
-      // Facing hysteresis: chỉ đổi khi trục X rõ
+      // Speed = hero.speed × moveMul × stick magnitude (0..1)
+      // Full stick → same run speed as WASD; partial stick → proportional walk
       if (Math.abs(mx) > 0.22) player.facing = mx > 0 ? 1 : -1;
-      const step = player.speed * moveMul * dt;
+      const runSpeed = player.speed * moveMul;
+      const step = runSpeed * dt;
       player._lastMx = mx * step;
       player._lastMy = my * step;
       player.x = clamp(player.x + player._lastMx, player.r + 8, MAP_W - player.r - 8);
@@ -7468,15 +7525,21 @@
     }
     updateRunPills();
 
+    // Timer / boss label — mobile shows time only (centered); desktop can show hall
+    const mobileHud =
+      document.body.classList.contains("run-portrait") ||
+      (typeof wantsMobileRunControls === "function" && wantsMobileRunControls());
     if (phase === "boss" || phase === "boss_announce") {
       el.waveText.textContent = "CHÚA TỂ";
     } else if (isBoglandsRun()) {
-      const hallShort = currentHall ? currentHall.name : "Sảnh";
-      el.waveText.textContent = `${hallShort} · ${kills}/${bogKillTarget()}`;
+      el.waveText.textContent = mobileHud
+        ? `${kills}/${bogKillTarget()}`
+        : `${currentHall ? currentHall.name : "Sảnh"} · ${kills}/${bogKillTarget()}`;
     } else {
       const left = Math.max(0, RUN_DURATION_SEC - elapsed);
-      const hallShort = currentHall ? currentHall.name : "Sảnh";
-      el.waveText.textContent = `${hallShort} · ${formatTime(left)}`;
+      el.waveText.textContent = mobileHud
+        ? formatTime(left)
+        : `${currentHall ? currentHall.name : "Sảnh"} · ${formatTime(left)}`;
     }
 
     if (el.skillCdFill) {
@@ -10943,7 +11006,11 @@
       ctx.fillRect(0, 0, W, H);
     }
 
-    if (phase === "running" || phase === "intro") {
+    // Canvas debug strip — desktop only (mobile uses top HUD)
+    if (
+      (phase === "running" || phase === "intro") &&
+      !document.body.classList.contains("run-portrait")
+    ) {
       const alive = enemies.filter((e) => !e.isBoss).length;
       const left = Math.max(0, RUN_DURATION_SEC - elapsed);
       const str = hallStrengthAt(runProgress()).toFixed(2);
@@ -11051,7 +11118,7 @@
   });
 
   // ─── Mobile: floating virtual stick (spawn at touch) ──
-  // Semi-transparent UI · larger travel · small deadzone · smooth analog · base follow
+  // Full tilt = 100% hero run speed (player.speed * moveMul). Partial = proportional.
   const joyState = {
     active: false,
     id: null,
@@ -11063,14 +11130,14 @@
     cy: 0,
     maxR: 52,
     half: 64,
-    // small deadzone — still kills thumb jitter
-    deadFrac: 0.08,
-    // full combat speed before outer ring (easier sprint)
-    fullAt: 0.82,
-    // exponential ease for natural ramp
-    curve: 0.88,
-    // light smoothing (0 = raw, 1 = frozen)
-    smooth: 0.28,
+    // small deadzone — kill thumb jitter only
+    deadFrac: 0.07,
+    // reach full hero speed by ~68% of ring (easy to hit max run)
+    fullAt: 0.68,
+    // linear speed curve (1 = linear) so speed tracks stick + hero.speed cleanly
+    curve: 1,
+    // light direction smooth only; magnitude snaps to full when near edge
+    smooth: 0.12,
     follow: true,
   };
 
@@ -11236,39 +11303,49 @@
       len = maxR;
     }
 
-    const dead = Math.max(2.5, maxR * (joyState.deadFrac || 0.08));
+    const dead = Math.max(2.5, maxR * (joyState.deadFrac || 0.07));
     let nx = 0;
     let ny = 0;
     let out = 0;
     if (len > dead) {
-      // 0..1 after deadzone; reach full speed before outer edge (fullAt)
-      const fullAt = joyState.fullAt || 0.82;
-      let mag = (len - dead) / (maxR * fullAt - dead);
+      // 0..1 after deadzone — fullAt fraction of ring = 100% hero run speed
+      const fullAt = joyState.fullAt != null ? joyState.fullAt : 0.68;
+      const span = Math.max(4, maxR * fullAt - dead);
+      let mag = (len - dead) / span;
       if (mag < 0) mag = 0;
       if (mag > 1) mag = 1;
-      // Power curve: a bit more mid-range speed for combat kiting
-      const curve = joyState.curve || 0.88;
-      out = Math.pow(mag, curve);
+      // Snap to full run when stick is clearly at the rim (matches keyboard full speed)
+      if (mag >= 0.9 || len >= maxR * 0.92) mag = 1;
+      const curve = joyState.curve != null ? joyState.curve : 1;
+      out = curve === 1 ? mag : Math.pow(mag, curve);
       const inv = 1 / len;
       nx = dx * inv * out;
       ny = dy * inv * out;
     }
 
-    // Light EMA smooth — kills 1-frame finger noise without laggy feel
-    const s = joyState.smooth != null ? joyState.smooth : 0.28;
+    // Light EMA on direction+speed — lighter when at full run so hero speed stays exact
+    const sBase = joyState.smooth != null ? joyState.smooth : 0.12;
+    const s = out >= 0.98 ? 0.04 : sBase;
     const a = 1 - s;
     joyState.smx = joyState.smx * s + nx * a;
     joyState.smy = joyState.smy * s + ny * a;
-    // Snap to zero when raw is zero (release / deadzone)
     if (out < 0.001) {
       joyState.smx = 0;
       joyState.smy = 0;
     }
-    // Kill residual noise under threshold
-    const smLen = Math.hypot(joyState.smx, joyState.smy);
+    // Re-snap full magnitude after smooth so max tilt = true hero speed
+    let smLen = Math.hypot(joyState.smx, joyState.smy);
+    if (out >= 0.98 && smLen > 0.001) {
+      joyState.smx = (joyState.smx / smLen) * out;
+      joyState.smy = (joyState.smy / smLen) * out;
+      smLen = out;
+    }
     if (smLen < 0.02) {
       joyState.smx = 0;
       joyState.smy = 0;
+    } else if (smLen > 1) {
+      joyState.smx /= smLen;
+      joyState.smy /= smLen;
     }
 
     joyState.mx = joyState.smx;

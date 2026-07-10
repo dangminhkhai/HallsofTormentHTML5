@@ -2277,14 +2277,102 @@ kbd {
   font-variant-numeric: tabular-nums;
 }
 
-/* Ability pick cards â€” show stats */
-.upgrade-btn .ab-pick-stats {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: 0.72rem;
-  color: #9aa8c0;
+/* Ability 3-pick cards — structured name / desc / stat chips */
+.upgrade-btn.ab-pick-card.pick-with-icon {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+  padding: 12px 12px !important;
+  text-align: left !important;
+  position: relative;
+}
+.upgrade-btn.ab-pick-card .ab-pick-icon,
+.upgrade-btn.ab-pick-card.pick-with-icon .ability-icon {
+  width: 56px !important;
+  height: 56px !important;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  margin: 0 !important;
+}
+.ab-pick-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+.ab-pick-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+.ab-pick-name {
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  margin: 0 !important;
+  display: inline !important;
+  letter-spacing: 0.02em;
+}
+.ab-pick-type {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 5px;
+  border: 1px solid;
+  background: rgba(12, 10, 16, 0.75);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.ab-pick-desc {
+  margin: 0;
+  font-size: 0.8rem;
   line-height: 1.35;
-  font-weight: 400;
+  color: var(--muted);
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.upgrade-btn .ab-pick-stats,
+.ab-pick-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+}
+.ab-stat-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: rgba(20, 16, 32, 0.9);
+  border: 1px solid rgba(58, 47, 74, 0.75);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  color: var(--text);
+}
+.ab-stat-chip i {
+  font-style: normal;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ab-stat-chip b {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #e8e0d4;
 }
 
 /* Boss HP â€” soft glass */
@@ -2837,6 +2925,129 @@ kbd {
   flex: 0 0 auto;
 }
 
+/* ── Chest pick: compact header · rarity key top-right ── */
+.levelup-panel.chest-mode {
+  position: relative;
+  padding-top: 0.75rem;
+}
+.levelup-panel.chest-mode h2 {
+  text-align: center;
+  font-size: 1.15rem;
+  margin-bottom: 0.15rem;
+  padding: 0 4.5rem 0 0.5rem; /* room for rarity key */
+}
+#levelup-sub.chest-sub {
+  display: block;
+  position: relative;
+  margin: 0 0 10px;
+  min-height: 1.1em;
+  padding: 0;
+  text-align: center;
+}
+.chest-pick-hint {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+.chest-pick-hint strong {
+  color: var(--gold);
+}
+/* Tiny rarity legend — top-right of panel */
+.chest-rar-legend {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  z-index: 2;
+  pointer-events: none;
+  line-height: 1.15;
+}
+.chest-rar-legend .crl {
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+.chest-rar-legend .crl-c { color: #9aa0a8; }
+.chest-rar-legend .crl-u { color: #50c070; }
+.chest-rar-legend .crl-r { color: #c080e0; }
+
+/* Chest item cards */
+.upgrade-btn.chest-card.pick-with-icon {
+  align-items: flex-start !important;
+  gap: 10px !important;
+  padding: 10px 12px !important;
+}
+.chest-card-body {
+  gap: 3px !important;
+}
+.chest-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.chest-item-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.98rem !important;
+  font-weight: 800 !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Small rarity badge — right side of name row */
+.chest-rar-corner,
+.upgrade-btn .rar-badge.chest-rar-corner {
+  flex: 0 0 auto;
+  font-size: 0.52rem !important;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 5px !important;
+  border-radius: 4px;
+  margin: 0 !important;
+  text-transform: uppercase;
+  line-height: 1.15;
+  white-space: nowrap;
+  max-width: 5.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chest-item-meta {
+  font-size: 0.68rem !important;
+  font-weight: 600;
+  opacity: 0.9;
+  display: block;
+}
+.chest-item-desc {
+  font-size: 0.72rem !important;
+  line-height: 1.35 !important;
+  color: var(--muted) !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.levelup-panel.chest-mode .levelup-actions {
+  display: none; /* no reroll on chests */
+}
+.levelup-panel.chest-mode .upgrade-grid.chest-grid {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: min(62vh, 480px);
+  gap: 8px;
+}
+
 .lu-legend {
   display: flex;
   flex-wrap: wrap;
@@ -3289,10 +3500,19 @@ kbd {
 .upgrade-btn.ab-dmg-elemental { border-color: rgba(80, 192, 176, 0.4) !important; }
 .upgrade-btn.ab-dmg-bard { border-color: rgba(224, 112, 176, 0.45) !important; }
 
-/* 3-pick layout: horizontal with badge */
-.ability-panel .upgrade-grid:not(.ability-full-list) .upgrade-btn {
+/* 3-pick layout: structured cards (no absolute badge over text) */
+.ability-panel .upgrade-grid:not(.ability-full-list) {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: min(70vh, 560px);
+}
+.ability-panel .upgrade-grid:not(.ability-full-list) .upgrade-btn.ab-pick-card {
   position: relative;
-  padding-right: 2.5rem;
+  padding-right: 12px !important;
+  min-height: 0;
 }
 
 .ability-panel .upgrade-grid.ability-full-list .upgrade-btn strong {
@@ -4057,9 +4277,9 @@ body.run-portrait #game,
   height: auto;
   flex: 1 1 auto;
   min-height: 0;
-  /* 9:16 internal canvas scales to fill width */
+  /* Full bleed — HUD is absolute overlay, no bottom menu strip */
   aspect-ratio: 9 / 16;
-  max-height: calc(100dvh - 108px - env(safe-area-inset-bottom, 0px));
+  max-height: 100dvh;
   object-fit: contain;
   margin: 0 auto;
   border: none;
@@ -4074,85 +4294,175 @@ body.run-portrait #ability-panel,
   display: none !important;
 }
 
-/* Bottom glass dock — oversized for phone readability */
+/*
+ * Portrait mobile HUD: compact TOP overlay only.
+ * Keep: timer · HP · EXP · gold · kills
+ * Hide: bottom dock, ability chips, shards, class, pills, diff blurb
+ */
+body.run-portrait #game-wrap,
+#game-wrap.run-portrait {
+  /* canvas fills almost full height — HUD overlays, not a bottom dock */
+}
+body.run-portrait #game,
+#game-wrap.run-portrait #game {
+  max-height: 100dvh !important;
+  flex: 1 1 auto;
+}
+
 body.run-portrait #hud,
 #game-wrap.run-portrait #hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   width: 100%;
   max-width: 100%;
-  flex: 0 0 auto;
-  min-height: 0;
+  flex: none;
   margin: 0;
-  padding: 12px 14px max(16px, env(safe-area-inset-bottom, 16px));
-  gap: 10px;
-  flex-wrap: wrap;
+  z-index: 14;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 6px;
+  padding:
+    max(10px, env(safe-area-inset-top, 10px))
+    58px
+    10px
+    12px; /* right pad for pause btn */
   border: none;
-  border-top: 1px solid rgba(212, 168, 75, 0.2);
-  background:
-    linear-gradient(180deg, rgba(24, 18, 36, 0.96), rgba(8, 6, 12, 0.99));
-  box-shadow: 0 -10px 36px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
-  font-size: 0.95rem;
-  z-index: 10;
+  border-bottom: 1px solid rgba(212, 168, 75, 0.22);
+  border-radius: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 8, 14, 0.92) 0%,
+    rgba(12, 10, 16, 0.78) 70%,
+    rgba(12, 10, 16, 0.2) 100%
+  );
+  box-shadow: none;
+  font-size: 0.85rem;
+  pointer-events: none; /* don't block stick under edges */
 }
+
+/* Timer — top center */
 body.run-portrait .hud-center,
 #game-wrap.run-portrait .hud-center {
-  flex: 1 1 100%;
-  order: -1;
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: center;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  order: 0;
+  flex: none;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px 14px;
-  padding: 0 56px 10px 10px; /* room for pause */
-  margin-bottom: 2px;
-  border-bottom: 1px solid rgba(58, 47, 74, 0.5);
+  justify-content: center;
+  gap: 0;
+  padding: 0 4px 2px;
+  margin: 0;
+  border: none;
+  min-width: 0;
 }
-body.run-portrait #wave-text { font-size: 1.4rem; font-weight: 800; letter-spacing: 0.04em; }
-body.run-portrait #diff-text { font-size: 0.95rem; }
-/* Hide class name in-run HUD (mobile + portrait) */
+body.run-portrait #wave-text {
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  line-height: 1.1;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
+}
+/* Drop hall name / torment / class / pills from center */
+body.run-portrait #diff-text,
 body.run-portrait #class-name,
-#game-wrap.run-portrait #class-name {
+body.run-portrait #run-pills,
+#game-wrap.run-portrait #diff-text,
+#game-wrap.run-portrait #class-name,
+#game-wrap.run-portrait #run-pills {
   display: none !important;
 }
+
+/* HP + EXP left */
 body.run-portrait .hud-left,
-body.run-portrait .hud-right,
-#game-wrap.run-portrait .hud-left,
-#game-wrap.run-portrait .hud-right {
-  flex: 1 1 46%;
+#game-wrap.run-portrait .hud-left {
+  grid-column: 1 / 3;
+  grid-row: 2;
+  flex: none;
+  width: auto;
   min-width: 0;
-  gap: 8px;
+  gap: 5px;
+  pointer-events: none;
 }
-body.run-portrait .hud-right { align-items: flex-end; }
-body.run-portrait .bar-wrap {
-  gap: 6px;
-  min-height: 22px;
+/* Gold + kills right — no ability chips, no shards */
+body.run-portrait .hud-right,
+#game-wrap.run-portrait .hud-right {
+  grid-column: 3 / 4;
+  grid-row: 2;
+  flex: none;
+  align-items: flex-end;
+  justify-content: center;
+  min-width: 0;
+  gap: 4px;
+  pointer-events: none;
 }
-body.run-portrait .bar-label { width: auto; min-width: 2.4em; font-size: 0.82rem; font-weight: 700; }
-body.run-portrait .bar { max-width: none; height: 14px; border-radius: 8px; }
-body.run-portrait #hp-text,
-body.run-portrait #lvl-text { font-size: 0.85rem; font-weight: 700; }
-body.run-portrait .hud-meta-row { font-size: 0.9rem; gap: 12px; font-weight: 600; }
-body.run-portrait #gold-text,
+body.run-portrait #ability-hud,
 body.run-portrait #shards-hud,
-body.run-portrait #kills { font-size: 0.9rem; }
-body.run-portrait #ability-hud { max-width: 100%; gap: 6px; }
-body.run-portrait .ability-chip {
-  font-size: 0.8rem;
-  padding: 8px 12px;
-  border-radius: 10px;
-  max-width: 130px;
-  min-height: 34px;
+#game-wrap.run-portrait #ability-hud,
+#game-wrap.run-portrait #shards-hud {
+  display: none !important;
+}
+body.run-portrait .hud-meta-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+}
+body.run-portrait #gold-text { color: var(--gold); font-size: 0.88rem; }
+body.run-portrait #kills { color: #e8e0d4; font-size: 0.82rem; }
+
+body.run-portrait .bar-wrap {
+  gap: 5px;
+  min-height: 0;
+}
+body.run-portrait .bar-label {
+  width: auto;
+  min-width: 2em;
+  font-size: 0.72rem;
   font-weight: 700;
 }
+body.run-portrait .bar {
+  max-width: none;
+  flex: 1 1 auto;
+  height: 12px;
+  border-radius: 7px;
+  min-width: 72px;
+}
+body.run-portrait #hp-text,
+body.run-portrait #lvl-text {
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Boss bar under compact top HUD */
 body.run-portrait #boss-bar-wrap {
   width: min(94vw, 420px);
-  top: max(16px, env(safe-area-inset-top));
+  top: max(96px, calc(env(safe-area-inset-top, 0px) + 88px));
   padding: 8px 10px;
+  z-index: 13;
 }
-body.run-portrait .boss-name { font-size: 0.95rem; font-weight: 800; }
-body.run-portrait .boss-bar { height: 14px; border-radius: 8px; }
+body.run-portrait .boss-name { font-size: 0.9rem; font-weight: 800; }
+body.run-portrait .boss-bar { height: 12px; border-radius: 8px; }
+
 body.run-portrait .mobile-pause-btn {
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
+  top: max(10px, env(safe-area-inset-top, 10px));
+  right: max(10px, env(safe-area-inset-right, 10px));
+  z-index: 16;
+  pointer-events: auto;
 }
 body.run-portrait .virtual-joystick.vj-float {
   width: 156px;
@@ -4163,15 +4473,18 @@ body.run-portrait .vj-stick {
   width: 54px; height: 54px;
   margin: -27px 0 0 -27px;
 }
-body.run-portrait .m-top-chrome { display: block; height: 80px; }
+/* Light top fade only — not a second menu strip */
+body.run-portrait .m-top-chrome {
+  display: none !important;
+}
 body.run-portrait #wave-banner {
-  top: 16%;
+  top: 22%;
   width: min(92vw, 380px);
   padding: 14px 18px;
   border-radius: 16px;
 }
 body.run-portrait #wave-banner-text {
-  font-size: 1.4rem;
+  font-size: 1.35rem;
   letter-spacing: 0.1em;
 }
 
@@ -4487,9 +4800,107 @@ body.run-portrait #wave-banner-text {
   .pick-icon.ability-icon,
   .ability-icon { width: 52px !important; height: 52px !important; }
   .toast-host .toast { font-size: 0.9rem; padding: 10px 14px; }
+
+  /* Ability pick (Cuộn / Sách) — readable on phone */
+  .ability-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: min(92dvh, 900px);
+    padding: 0.85rem 0.75rem 0.9rem;
+    border-radius: 18px 18px 12px 12px;
+  }
+  .ability-panel h2 {
+    font-size: 1.2rem;
+    text-align: center;
+  }
+  .ability-panel > p {
+    font-size: 0.8rem;
+    text-align: center;
+    margin-bottom: 0.5rem;
+  }
+  .ability-panel .upgrade-grid:not(.ability-full-list) {
+    gap: 10px;
+    max-height: min(72dvh, 640px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .upgrade-btn.ab-pick-card.pick-with-icon {
+    gap: 10px !important;
+    padding: 12px 10px !important;
+    border-radius: 14px !important;
+    align-items: flex-start !important;
+  }
+  .upgrade-btn.ab-pick-card .ab-pick-icon,
+  .upgrade-btn.ab-pick-card.pick-with-icon .ability-icon {
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 12px;
+  }
+  .ab-pick-name {
+    font-size: 1.08rem !important;
+  }
+  .ab-pick-type {
+    font-size: 0.58rem;
+    padding: 3px 6px;
+  }
+  .ab-pick-desc {
+    font-size: 0.78rem;
+    -webkit-line-clamp: 3;
+    line-height: 1.4;
+  }
+  .ab-pick-stats {
+    gap: 5px;
+  }
+  .ab-stat-chip {
+    font-size: 0.74rem;
+    padding: 4px 8px;
+    border-radius: 7px;
+  }
+  .ab-stat-chip i {
+    font-size: 0.64rem;
+  }
+  /* Full catalog: larger tiles on phone */
+  .ability-panel .upgrade-grid.ability-full-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px;
+    overflow: auto !important;
+    max-height: min(70dvh, 560px);
+    -webkit-overflow-scrolling: touch;
+  }
+  .ability-panel .upgrade-grid.ability-full-list .upgrade-btn strong {
+    font-size: 0.7rem !important;
+  }
+  .ability-panel .upgrade-grid.ability-full-list .ability-icon {
+    width: 36px !important;
+    height: 36px !important;
+  }
   .levelup-panel, .pause-panel, .ability-panel {
     width: 100% !important;
     max-width: 100% !important;
+  }
+  /* Chest rarity key stays tiny top-right on phones */
+  .chest-rar-legend {
+    top: 0.5rem;
+    right: 0.55rem;
+  }
+  .chest-rar-legend .crl {
+    font-size: 0.5rem;
+  }
+  .levelup-panel.chest-mode h2 {
+    font-size: 1.1rem;
+    padding-right: 4.2rem;
+  }
+  .chest-pick-hint { font-size: 0.75rem; }
+  .chest-item-name { font-size: 0.95rem !important; }
+  .chest-rar-corner,
+  .upgrade-btn .rar-badge.chest-rar-corner {
+    font-size: 0.48rem !important;
+    padding: 1px 4px !important;
+  }
+  .chest-item-desc {
+    font-size: 0.7rem !important;
+    -webkit-line-clamp: 2;
   }
   .ability-panel .upgrade-grid.ability-full-list {
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;

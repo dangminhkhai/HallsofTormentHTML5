@@ -5,7 +5,7 @@ Mục tiêu: AI hoặc dev khác đọc file này là nắm được **game có 
 
 **Cập nhật:** 2026-07-10 · **Repo:** https://github.com/dangminhkhai/HallsofTormentHTML5 · **Branch:** `main`  
 **Workspace local:** `C:\Users\Khai\halls-of-torment\`  
-**Ghi chú session:** balance + boss feel; mobile world zoom ×1.48; loadout độ hiếm; item U/R; pause tab; **Android APK offline (Capacitor)** · xem `ANDROID.md`.
+**Ghi chú:** mobile HUD top; ability/chest UI; joystick = hero speed; world zoom; **APK offline tracked** tại `dist-apk/HallsOfTorment-debug.apk` · `ANDROID.md`.
 
 ---
 
@@ -51,7 +51,8 @@ index.html
 `file://` OK · `node --check game.js`
 
 ### Android APK (offline)
-Chi tiết: **`ANDROID.md`**.
+Chi tiết: **`ANDROID.md`**.  
+**APK trong repo:** `dist-apk/HallsOfTorment-debug.apk` (commit khi phát hành test).
 
 ```powershell
 # Build lại debug APK
@@ -66,9 +67,10 @@ npm run build:apk
 | | |
 |--|--|
 | Package id | `com.dangminhkhai.hallsoftorment` |
-| webDir | `www/` (copy từ script `scripts/sync-www.js`) |
+| webDir | `www/` (copy `scripts/sync-www.js`, không commit) |
 | Config | `capacitor.config.json` |
-| Native | `android/` (Capacitor; không commit `build/`, `local.properties`) |
+| Native | `android/` (không commit `build/`, `local.properties`) |
+| APK track | `dist-apk/*.apk` (gitignore: ignore other `*.apk`) |
 
 ---
 
