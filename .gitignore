@@ -16,3 +16,17 @@ Desktop.ini
 tmp/
 temp/
 *.local
+
+# Node / Capacitor Android packaging
+node_modules/
+www/
+dist-apk/
+android/.gradle/
+android/app/build/
+android/build/
+android/capacitor-cordova-android-plugins/build/
+android/local.properties
+android/captures/
+*.apk
+*.aab
+*.hprof

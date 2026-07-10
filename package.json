@@ -1,0 +1,21 @@
+{
+  "name": "halls-of-torment-html5",
+  "version": "1.0.0",
+  "description": "Halls of Torment HTML5 — offline Android wrapper",
+  "private": true,
+  "scripts": {
+    "sync:www": "node scripts/sync-www.js",
+    "cap:sync": "npm run sync:www && npx cap sync android",
+    "cap:open": "npx cap open android",
+    "build:apk": "npm run cap:sync && node scripts/build-apk.js"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/status-bar": "^6.0.2",
+    "@capacitor/app": "^6.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0"
+  }
+}

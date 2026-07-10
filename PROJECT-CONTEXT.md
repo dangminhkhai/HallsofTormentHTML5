@@ -3,357 +3,233 @@
 Tài liệu tổng hợp **toàn bộ ngữ cảnh dự án** từ quá trình phát triển và các quyết định của user.  
 Mục tiêu: AI hoặc dev khác đọc file này là nắm được **game có gì**, **constraint gì**, **code nằm đâu**, **đừng làm gì**.
 
-**Cập nhật:** 2026-07-09 · **Repo:** https://github.com/dangminhkhai/HallsofTormentHTML5 · **Branch:** `main`  
-**Workspace local (máy hiện tại):** `C:\Users\Khai\halls-of-torment\`  
-**Ghi chú session gần đây:** mobile portrait + floating joystick (analog chính xác); tab Hero layout fix; Torment ẩn chọn sảnh; bank vàng/mảnh live; soft heroes; crit UX gọn.
+**Cập nhật:** 2026-07-10 · **Repo:** https://github.com/dangminhkhai/HallsofTormentHTML5 · **Branch:** `main`  
+**Workspace local:** `C:\Users\Khai\halls-of-torment\`  
+**Ghi chú session:** balance + boss feel; mobile world zoom ×1.48; loadout độ hiếm; item U/R; pause tab; **Android APK offline (Capacitor)** · xem `ANDROID.md`.
 
 ---
 
 ## 1. Dự án là gì
 
 - **Fan prototype browser** của game *Halls of Torment* (roguelite survivor-like, top-down).
-- **Stack:** vanilla **HTML + CSS + JS** — **không** build step, **không** framework, **không** bundler.
-- Chạy bằng mở `index.html` (file:// OK) trên Chrome / Edge / Firefox.
-- Nội dung / số liệu tham chiếu wiki: https://hot.fandom.com/wiki/Halls_of_Torment_Wiki (đã scale cho run ngắn 5–15 phút).
-- **Không** phải game official; dùng học / cá nhân.
+- **Stack web:** vanilla **HTML + CSS + JS** — không framework; mở `index.html` là chạy.
+- **Android:** gói offline qua **Capacitor 6** WebView → debug APK (`dist-apk/HallsOfTorment-debug.apk` sau build).
+- Wiki tham chiếu (scale run 5–15 phút): https://hot.fandom.com/wiki/Halls_of_Torment_Wiki
+- **Không** official; học / cá nhân.
 
 ---
 
-## 2. Quyết định & constraint của user (BẮT BUỘC tuân thủ)
-
-Các rule sau đã chốt qua hội thoại — **không tự ý đảo** trừ khi user yêu cầu:
+## 2. Quyết định & constraint (BẮT BUỘC)
 
 | Rule | Chi tiết |
 |------|----------|
-| **Full unlock** | Không khóa hero / hall / ability / mark / camp bằng quest. Mở hết để test / chơi. |
-| **Torment ladder** | Chế độ **Khổ hình (Torment)** vẫn có **cấp khóa** (thắng mới mở cấp tiếp) — khác Hall. |
-| **Torment = sảnh ngẫu nhiên** | **Không** hiện UI chọn màn khi Torment (PC + mobile). Hall random lúc `startGame`. |
-| **Không shadow** | `drawShadow` = no-op. Không vẽ bóng chân. |
-| **Map không rối** | Props **thưa** (sparse pillars + few floor accents). Không spam trang trí. |
-| **Ability 1 màn, không scroll** | Panel chọn ability: grid compact, `overflow: hidden`, fit một màn. |
-| **Không filter ability** | User bỏ filter theo dmg type — hiện full list. |
-| **Full VI** | UI tiếng Việt. Tab Hero dùng **nhãn chỉ số gọn** (tránh đè chữ); mô tả skill đầy đủ. |
-| **Đồ họa: Vector Soft** | User **từ chối** pixel/sprite bake. Combat dùng **design system soft** trong `art.js` (`HOT_ART`). |
-| **Không** dùng `HOT_SPRITES` / bake pixel cho world combat. | `sprites.js` còn trong repo nhưng **không load** trong `index.html`. |
-| **Crit UX** | Số crit **đỏ** · **không** freeze/hitstop/shake/flash plate “CHÍ MẠNG”. |
-| **Bank live** | Vàng + mảnh **ghi meta ngay khi nhặt** (không chỉ cuối run). |
-| **Mobile** | Portrait 9:16 in-run · **floating stick** (spawn tại điểm chạm) · analog speed · setting bật/tắt. |
-| **Tab Chơi gọn** | Không strip “quick hero” / không dải hero stats trên play tab (PC + mobile). Chọn hero ở tab **Anh hùng**. |
-| **Git** | User nói `up git` → commit + push `origin/main`. |
-
-### Lịch sử đồ họa (quan trọng)
-
-1. Prototype UI/logic trước → user: HTML5 “đồ họa xấu”.
-2. Thử **pixel sprites** (`sprites.js`) → user **reject**.
-3. Chuyển **Vector Soft Design System** (`art.js`) — tokens, plates, soft enemy/FX/props.
-4. Soft **14 heroes** + ability icons/FX · polish HUD / camp / mobile.
+| **Full unlock** | Không khóa hero / hall / ability / mark / camp bằng quest. |
+| **Torment ladder** | Cấp Khổ hình khóa theo tiến độ (thắng mới mở cấp tiếp). |
+| **Torment = sảnh ngẫu nhiên** | Ẩn UI chọn màn; hall random lúc `startGame`. |
+| **Không shadow** | `drawShadow` = no-op. |
+| **Map thưa** | Props sparse. |
+| **Ability 1 màn, không scroll** | Grid compact, full list, không filter dmg type. |
+| **Full VI** | UI tiếng Việt; tab Hero nhãn chỉ số gọn. |
+| **Vector Soft only** | Combat `HOT_ART` (`art.js`). Không pixel combat. `sprites.js` không load. |
+| **Crit UX** | Số đỏ · **không** freeze / plate “CHÍ MẠNG” / hitstop crit. |
+| **Bank live** | Vàng + mảnh → meta ngay khi nhặt. |
+| **Mobile** | Portrait 9:16 · floating analog stick · **world zoom** · HUD to · **PC không** hiện stick/pause. |
+| **In-run** | Không vẽ tên hero trên đầu / ẩn `#class-name` HUD. |
+| **Loadout** | Giếng: bấm cycle **Thường → Hiếm vừa → Cực hiếm → gỡ** (miễn phí). |
+| **Git** | `up git` → commit + push `origin/main`. |
 
 ---
 
-## 3. Cách chạy & script load order
+## 3. Cách chạy
 
+### Browser
 ```text
 index.html
-  → data.js          (nội dung game)
-  → vi-locale.js     (Việt hóa strings)
-  → art.js           (HOT_ART — design system)
-  → sfx.js           (Web Audio procedural)
-  → menu-portraits.js
-  → hall-art.js
-  → ability-icons.js
-  → game.js          (runtime chính — file lớn ~420KB+)
+  → data.js → vi-locale.js → art.js → sfx.js
+  → menu-portraits.js → hall-art.js → ability-icons.js → game.js
+```
+`file://` OK · `node --check game.js`
+
+### Android APK (offline)
+Chi tiết: **`ANDROID.md`**.
+
+```powershell
+# Build lại debug APK
+$env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-17.0.19.10-hotspot"
+$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+$env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
+npm install
+npm run build:apk
+# → dist-apk/HallsOfTorment-debug.apk
 ```
 
-**Không load:** `sprites.js` (legacy pixel; giữ file nhưng combat không dùng).
-
-**Syntax check:** `node --check art.js` · `node --check game.js`
+| | |
+|--|--|
+| Package id | `com.dangminhkhai.hallsoftorment` |
+| webDir | `www/` (copy từ script `scripts/sync-www.js`) |
+| Config | `capacitor.config.json` |
+| Native | `android/` (Capacitor; không commit `build/`, `local.properties`) |
 
 ---
 
 ## 4. Cấu trúc file
 
-| File | Vai trò |
-|------|---------|
-| `index.html` | Shell UI: menu (tabs Chơi / Anh hùng / Trại), canvas HUD, mobile controls, overlays |
-| `style.css` | Theme dark + gold, menu, hero tab, HUD glass, mobile portrait + floating stick |
-| `data.js` | **Data-only** IIFE → `window.HOT`: heroes, enemies, bosses, halls, items, abilities, marks, artifacts, blessings, shop, balance, `settings.joystick` default |
-| `game.js` | Loop, combat, spawn, meta save, menu, joystick, draw world, hero drawers, UI runtime |
-| `art.js` | `window.HOT_ART`: tokens, plates, soft world draws |
-| `vi-locale.js` | Bản dịch VI cho UI / data labels |
-| `ability-icons.js` | Vẽ icon ability lên canvas (dùng plate từ `HOT_ART`) + cache |
-| `menu-portraits.js` | Portrait hero menu |
-| `hall-art.js` | Art hall (menu / décor) |
-| `sfx.js` | SFX procedural (master bus + throttle) |
-| `sprites.js` | **Legacy** pixel bake — không dùng combat hiện tại |
-| `README.md` | Hướng dẫn chơi ngắn (EN) |
-| `PROJECT-CONTEXT.md` | **File này** — context cho AI |
-| `.gitignore` | Chuẩn |
+| File / thư mục | Vai trò |
+|----------------|---------|
+| `index.html` | Shell UI, mobile controls, pause tabs |
+| `style.css` | Theme, menu, mobile portrait HUD, joystick |
+| `data.js` | `HOT_DATA`: heroes, items+U/R packages, halls, balance, agony, torment |
+| `game.js` | Runtime combat, meta, joystick, zoom, boss AI, menu |
+| `art.js` | `HOT_ART` vector soft |
+| `vi-locale.js` | VI labels |
+| `ability-icons.js` · `menu-portraits.js` · `hall-art.js` | Icons / portraits / hall art |
+| `sfx.js` | Web Audio procedural |
+| `package.json` · `capacitor.config.json` | Capacitor packaging |
+| `scripts/sync-www.js` · `build-apk.js` · `setup-android-sdk.ps1` | Build APK helpers |
+| `android/` | Native Android project (Capacitor) |
+| `ANDROID.md` | Hướng dẫn cài / build APK |
+| `PROJECT-CONTEXT.md` | File này |
+| `README.md` | Hướng dẫn ngắn |
 
-### localStorage keys
+### localStorage
 
 | Key | Nội dung |
 |-----|----------|
-| `hot_proto_meta_v3` | Meta progress (gold, shards, loadout, marks, blessings, torment unlock, …). Fallback đọc `v2`. |
-| `hot_proto_settings_v1` | Settings: SFX, gamepad, **joystick** (mobile), … |
-| `hot_proto_art_open` | UI collapse artifacts panel |
-| `hot_proto_v1` | Snapshot nhẹ hero/hall |
-
-Clear meta: **Camp → Settings**.
+| `hot_proto_meta_v3` | Meta (gold, shards, loadout **{id,rarity}**, marks, torment…) |
+| `hot_proto_settings_v1` | SFX, shake, gamepad, **joystick** |
+| `hot_proto_art_open` | Collapse artifacts |
+| `hot_proto_v1` | Snapshot hero/hall |
 
 ---
 
-## 5. Game có gì (feature inventory)
+## 5. Feature inventory
 
-### 5.1 Chế độ chơi
+### 5.1 Modes
+- **Hall:** chọn sảnh · 5/10/15p · Agony 1–5 (meter scale theo run).
+- **Torment:** ladder · ẩn hall picker · random hall · artifacts mở hết.
 
-| Mode | ID / UI | Mô tả |
-|------|---------|--------|
-| **Sảnh (Hall)** | `hall` | Chọn hall (`#zone-halls`) · duration **5 / 10 / 15 phút** · optional **Agony** (cấp 1–5) |
-| **Khổ hình (Torment)** | `torment` | Ladder cấp (khóa theo tiến độ) · **ẩn** `#zone-halls` + hall art sidebar · hall **random** lúc start · **Artifacts** (mở hết) |
+### 5.2 Heroes (14) · Halls (7)
+Roster theo dmg type (VL/PT/NT/K). Soft drawers trong `game.js`.
 
-- `updateDiffUI()`: `zoneHalls.classList.toggle("hidden", isTorment)` — không còn overlay “mode-disabled”.
-- `startGame`: Torment → `pickRandomHallId()`; Hall → `pendingHallId`.
-- Duration: `RUN_DURATIONS`, `TORMENT_DURATIONS` trong `data.js`.
+### 5.3 Items
+- 7 slot · Common / **Uncommon (Boost)** / **Rare (Boost+Growth)**.
+- Rare apply = common + uncommon package + rare package.
+- Rương: tỉ lệ U/R cao hơn · guarantee ≥1 Uncommon; elite/boss guarantee Rare.
+- **Loadout Giếng:** cycle rarity bằng re-click.
 
-### 5.2 Heroes (14)
+### 5.4 Combat & balance (`data.js` BALANCE + `getDiffMods`)
+- Early spawn nhẹ · late ramp HP/ST/spawn theo progress.
+- Agony rank rõ; Torment L1 soft entry, scale `^L`.
+- Boss: `bossHpMul` / `bossDmgMul` · phase 2/3 · wind_charge telegraph · slam ring · hit sparks · player hurt numbers.
 
-Order UI (`HERO_ORDER`):
+### 5.5 Mobile in-run
+| | |
+|--|--|
+| Layout | `body.run-portrait` · canvas 9:16 · HUD dock dưới |
+| Stick | Floating · analog · mờ · base follow · `settings.joystick` |
+| World zoom | `getWorldZoom()` · portrait **×1.48** · touch landscape **×1.28** · PC ×1 |
+| Controls | Chỉ `wantsMobileRunControls()` (coarse pointer) — **PC ẩn stick/pause** |
+| Name | Không vẽ `player.name` world; ẩn `#class-name` |
 
-- **Physical:** `swordsman`, `archer`, `shield_maiden`, `beast_huntress`, `landsknecht`
-- **Magic:** `cleric`, `warlock`, `sage`
-- **Elemental:** `exterminator`, `sorceress`, `norseman`, `crone`, `alchemist`
-- **Other:** `bard`
+### 5.6 Pause
+- Subtabs: **Trạng thái** (build) · **Cài đặt** (vol + checkbox 2×2 gọn).
+- `enterPause()` · `setPauseTab()`.
 
-Mỗi hero: stats, weapon style, skill, palette, drawer soft trong `game.js` (`HERO_DRAWERS`).
-
-**Tab Anh hùng (`#tab-hero`):**
-- Roster theo loại ST (Vật lý / Phép / Nguyên tố / Khác).
-- Panel phải: portrait · tên · vũ khí · pill dmg · **blurb block** · block **Khả năng** (tên + desc + CD) · bảng chỉ số Cơ bản / Có đồ.
-- Layout: luôn **cột dọc** trên tab Hero — **không** inherit compact row-wrap của run sidebar (`#tab-run .hero-detail`).
-- Nhãn stat **gọn** trong grid 2 cột (tránh đè chữ VI dài).
-- Nút “Chọn & về tab Chơi”.
-
-### 5.3 Halls (7)
-
-`HALL_ORDER`:
-
-1. `haunted_caverns`
-2. `ember_grounds`
-3. `forgotten_viaduct`
-4. `frozen_depths`
-5. `chambers_of_dissonance`
-6. `the_vault`
-7. `boglands`
-
-Mỗi hall: theme, spawn curve, miniboss, boss, hall strength.
-
-### 5.4 Combat systems (`game.js`)
-
-- Move: WASD + gamepad + **virtual joystick analog** (`player._joyMx/_joyMy`)
-- Attack theo `style` (melee / bow / magic / …)
-- Enemies + elite + **miniboss** + **boss**
-- Projectiles, AOE, slash FX, particles, floating damage (crit = đỏ, không freeze)
-- Status: burn, electrify, slow/frost, decay, fragile, mark, …
-- Abilities (max 6), orbs, summons
-- Items (7 slots), rarity packages
-- Gold / XP / tomes / chests / barrels / well — **gold & shards bank ngay khi nhặt**
-- Level-up traits & ability upgrades
-- Pause + settings + build summary
-
-### 5.5 Meta / Camp
-
-- **Blessings** · **Well loadout** · **Marks** · **Artifacts** · **Shard shop** · **Settings**
-- Settings: SFX, gamepad, **Cần xoay (mobile)** (`settings.joystick`), reset meta
-- Bank gold / shards trên menu (live từ in-run pickups)
-
-### 5.6 UI surfaces
-
-- Menu tabs: **Chơi** · **Anh hùng · Chỉ số** · **Trại**
-- Tab Chơi: mode Hall/Torment · (hall grid chỉ Hall) · duration · Agony hoặc Torment level + artifacts · sidebar start
-- **Không** `zone-run-hero` / quick hero strip (đã gỡ)
-- In-run: HUD · skill CD · ability chips · boss bar · wave banner
-- Overlays: level-up (compact, categories), ability pick 1 màn, pause (+ settings), well, end
-- Mobile: `#mobile-controls` — pause float + full-screen touch pad + floating stick
-
-### 5.7 Controls
-
-| Input | Action |
-|-------|--------|
-| WASD | Move (digital full speed) |
-| Esc / P | Pause |
-| Gamepad | Stick/D-pad move · Start pause |
-| **Mobile stick** | Chạm bất kỳ đâu (trừ pause) → spawn pad tại điểm chạm · kéo analog 0→1 |
-| Attack | Auto theo class |
-
-#### Virtual joystick (mobile) — implementation notes
-
-| Hạng mục | Chi tiết |
-|----------|----------|
-| Entry | `wireVirtualJoystick()`, `joyState`, `applyJoyVector` trong `game.js` |
-| UI | `#touch-move-pad` + `#virtual-joystick.vj-float` · CSS `.mobile-controls` |
-| Geometry | Đo half từ DOM (`measureJoystickHalf`) · `maxR ≈ 78%` half |
-| Deadzone | Radial ~11% maxR · remap đúng (không double-scale) |
-| Analog | Vector **giữ magnitude** — movement **không** re-normalize full speed khi chỉ joy |
-| Follow | Base **trượt theo** ngón khi vượt maxR (vuốt dài vẫn đúng hướng) |
-| Setting | `settings.joystick` · checkbox `set-joystick` / `pause-set-joystick` |
-| Portrait | `body.run-portrait` · canvas ~9:16 in-run |
+### 5.7 Menu tabs
+**Chơi** · **Anh hùng** · **Trại** (blessings / well / marks / shards / settings).  
+Play + Hero mobile: scroll stack, không đè panel.
 
 ---
 
-## 6. Hệ đồ họa — Vector Soft (`art.js` → `window.HOT_ART`)
+## 6. Vector Soft (`art.js` → `HOT_ART`)
 
-### 6.1 Tokens (`HOT_ART.TOKENS`)
-
-- UI: `bg`, `panel`, `plate`, `border`, `text`, `muted`, `gold`, `blood`, `outline`
-- Rarity · damage types · elements · item slots
-
-Helpers: `hexA`, `shade`, `roundRect`, `softDisc`, `softCapsule`, …
-
-### 6.2 Icon plates
-
-| Loại | Plate |
-|------|--------|
-| Ability | **Circle** (`plateCircle`) |
-| Item | **Rounded square** (`plateSquare`) |
-| Mark / Artifact | **Diamond** (`plateDiamond`) |
-
-### 6.3 Soft world draws
-
-`drawSoftEnemy`, miniboss aura, pickups, AOE, orbs, summons, chest/barrel/well, pillars, floor accents, projectiles, slash, cast burst, status ring, particles, HP bar, floating text, `fxColor`.
-
-Master switch: `USE_PIXEL_SPRITES = false`.
-
-### 6.4 Hero / boss
-
-- **14 soft hero drawers** trong `game.js`
-- Boss: vector soft · shadow **disabled**
+Plates circle/square/diamond · soft enemy/pickup/AOE/projectile/slash · no shadow · map props sparse.
 
 ---
 
-## 7. Việt hóa
+## 7. Quy ước khi sửa code
 
-- `index.html` `lang="vi"`, title/menu VI.
-- `vi-locale.js` map string data → tiếng Việt.
-- UI chính VI; log/debug EN còn chấp nhận.
-- Tab Hero: nhãn chỉ số **rút gọn** (Máu, Tốc đánh, ST KN %, …) để grid không đè chữ.
-
----
-
-## 8. Data layer (`data.js` → `window.HOT`)
-
-Export chính: `HEROES`, `ENEMIES`, `BOSSES`, `TRAITS`, `ABILITY_UPGRADES`, `ABILITIES`, `ITEMS`, `ITEM_RARITY_PACKAGES`, `MARKS`, `ARTIFACTS`, `BLESSINGS`, `SHARD_SHOP`, `WELL`, `POTIONS`, `BARRELS`, `HALLS`, `HALL_ORDER`, `AGONY`, `TORMENT`, `TORMENT_MODE`, `BALANCE`, `WEAPON_PROF`, `HERO_ORDER`, `MAX_ABILITIES`, `MAX_ITEMS`, `MAX_LOADOUT`, helpers `HP`/`DMG`/`SPD`/`RNG`.
-
-Default settings include `joystick: true`.
-
-**Balance note:** HP/DMG wiki scale xuống cho run ngắn (`HP ≈ ×0.32`, `DMG ≈ ×0.18`, …).
-
----
-
-## 9. Quy ước code khi chỉnh sửa
-
-1. **Ưu tiên sửa local, reversible** — không force-push, không xóa meta user.
-2. **Đồ họa mới** → helper `art.js`, wire `game.js`; fallback nếu thiếu `HOT_ART`.
-3. **Không bật lại pixel combat** trừ khi user yêu cầu.
-4. **Map props sparse**.
-5. **Ability panel** 1 màn, không scroll dài.
-6. **Full unlock** content; chỉ Torment level giữ ladder.
-7. **Torment:** luôn ẩn hall picker; random hall at start.
-8. **VI** cho string user-facing mới.
-9. **Joystick:** giữ analog magnitude + radial deadzone đúng; đo size từ DOM.
-10. **Tab Hero:** không để media query run-sidebar (row-wrap / ẩn blurb) đụng `.hero-tab-detail`.
-11. `game.js` rất lớn — grep theo tên hàm; tránh refactor toàn file.
-12. User `up git` → commit rõ · `git push origin main`.
-13. Không commit secrets; không thêm dependency nặng nếu không được hỏi.
-
-### Lệnh git
+1. Local reversible; không force-push / xóa meta user.
+2. Đồ họa mới → `art.js` + wire `game.js`.
+3. Không bật pixel combat; map sparse; ability 1 màn.
+4. Torment luôn ẩn hall picker.
+5. Joystick: giữ analog magnitude; mobile-only chrome.
+6. World zoom: camera dùng `viewW()`/`viewH()`; draw scale trong `draw()`.
+7. Loadout lưu `{ id, rarity }`.
+8. `up git` → commit rõ · push `main`.
+9. APK: sau sửa web → `npm run build:apk`; không commit `node_modules/`, `www/`, `*.apk`, `android/**/build/`.
 
 ```bash
 cd C:\Users\Khai\halls-of-torment
-git status
 git add <files>
 git commit -m "..."
 git push origin main
 ```
 
-Remote: `https://github.com/dangminhkhai/HallsofTormentHTML5.git`
+---
+
+## 8. Việc đã xong (tóm tắt)
+
+- Full prototype Hall/Torment/camp/marks/artifacts/items U/R  
+- Soft 14 heroes · ability icons · bank live · crit đỏ  
+- Mobile portrait + stick + **world zoom** + HUD to  
+- Balance curve + boss telegraphs/phases/hit feel  
+- Pause tabs · Hero/Play mobile layout · Torment hide halls  
+- Loadout rarity cycle · item drop guarantees  
+- **Capacitor Android offline APK** pipeline  
 
 ---
 
-## 10. Việc đã xong (tóm tắt)
-
-- Full prototype: Hall/Torment, camp, marks, artifacts, U/R items
-- UI/UX menu + HUD · Việt hóa · ability full list 1 màn
-- Vector soft combat + **14 soft heroes** · ability icons/FX
-- **Bank live** gold/shards on pickup
-- Crit: red numbers · no freeze/shake/hitstop plate
-- Pause Esc + **Cài đặt** (SFX, gamepad, joystick)
-- **Tab Hero** layout fix (tên / khả năng / chỉ số không đè)
-- **Torment:** ẩn chọn màn (PC + mobile); sảnh random
-- **Mobile portrait 9:16** · floating joystick analog tối ưu (deadzone, maxR, base follow)
-- Gỡ quick-hero strip trên tab Chơi
-- Enemy telegraph · boss death burst · SFX bus/throttle
-
----
-
-## 11. Việc còn có thể nâng cấp
+## 9. Có thể nâng tiếp
 
 | Hạng mục | Ghi chú |
 |----------|---------|
-| Hero drawers / weapon FX chi tiết hơn | optional |
-| Tách module `game.js` | technical debt (~420KB+) |
-| Archive `sprites.js` | không load trong index |
-| Balance Torment gần wiki | optional |
-| Haptic / stick opacity prefs | optional |
+| Hero/weapon FX chi tiết | optional |
+| Tách `game.js` | debt |
+| Signed release APK / Play | cần keystore |
+| Haptic | optional |
+| Balance fine-tune theo feedback | ongoing |
 
 ---
 
-## 12. Anti-patterns (đừng làm)
+## 10. Anti-patterns
 
-- ❌ Filter ability / unlock gate content (trừ Torment level)
-- ❌ Pixel sprite combat / bob-lean rung
-- ❌ Shadow dưới chân
-- ❌ Map props dày đặc
-- ❌ Ability list scroll dài
-- ❌ Hiện hall grid khi Torment (user chốt: random, ẩn UI)
-- ❌ Re-normalize joystick → luôn full speed (mất precision)
-- ❌ Crit freeze / “CHÍ MẠNG” plate / shake nặng (đã bỏ theo feedback)
-- ❌ Media query run-sidebar đụng tab Hero (row-wrap → chữ đè)
-- ❌ Bịa mechanic “official exact” 1:1
-- ❌ Ghi đè uncommitted work / reset meta khi không được yêu cầu
+- ❌ Unlock gate content (trừ Torment level)  
+- ❌ Pixel combat / shadow / map dày / ability scroll  
+- ❌ Hall grid khi Torment  
+- ❌ Joystick full-speed normalize  
+- ❌ Crit freeze / CHÍ MẠNG plate  
+- ❌ Stick/pause trên PC  
+- ❌ Commit `node_modules`, APK, `android/build`  
 
 ---
 
-## 13. Quick map: “Tôi cần sửa X → file nào?”
+## 11. Quick map
 
 | Muốn sửa | File |
 |----------|------|
-| Chỉ số hero/item/ability/hall | `data.js` |
-| Text VI | `vi-locale.js` + `index.html` |
-| Màu / soft draw API | `art.js` |
-| Combat loop, spawn, damage, draw, joystick, menu | `game.js` |
-| Layout menu/HUD/mobile CSS | `style.css` |
-| Markup overlays / mobile pad | `index.html` |
-| Icon ability | `ability-icons.js` + plates `art.js` |
-| Portrait menu | `menu-portraits.js` |
-| Âm thanh | `sfx.js` |
-| Hall menu art | `hall-art.js` |
+| Balance / agony / torment scale | `data.js` → `BALANCE`, `AGONY`, `TORMENT_MODE` |
+| Boss AI / telegraph / zoom / combat | `game.js` |
+| Mobile HUD / menu CSS | `style.css` |
+| Item U/R packages | `data.js` `ITEM_RARITY_PACKAGES` |
+| Loadout UI | `game.js` `toggleLoadoutItem`, `buildWellGrid` |
+| APK packaging | `package.json`, `scripts/*`, `android/`, `ANDROID.md` |
 
-### Hàm / ID hay dùng
-
-| Chủ đề | Tìm |
-|--------|-----|
-| Torment UI | `updateDiffUI`, `setPlayMode`, `#zone-halls` |
-| Hero tab | `refreshHeroTabDetail`, `updateHeroStatPanel`, `#tab-hero` |
-| Joystick | `wireVirtualJoystick`, `applyJoyVector`, `joyState` |
-| Bank live | pickup → `meta.gold` / shards save |
-| Start gate | `startBlockReason`, `updateStartButton` |
+| Chủ đề | Hàm / ID |
+|--------|----------|
+| Diff | `getDiffMods`, `hallStrengthAt`, `spawnIntervalForProgress` |
+| Boss | `updateBoss`, `spawnBoss`, `wind_charge`, `slam` |
+| Zoom | `getWorldZoom`, `viewW`, `viewH` |
+| Stick | `wireVirtualJoystick`, `applyJoyVector` |
+| Pause | `enterPause`, `setPauseTab` |
+| APK | `npm run build:apk` |
 
 ---
 
-## 14. Tóm tắt một đoạn (copy cho system prompt ngắn)
+## 12. System prompt ngắn
 
-> Halls of Torment HTML5 là prototype vanilla JS fan game (repo dangminhkhai/HallsofTormentHTML5). Full unlock content; Torment ladder khóa cấp, **sảnh random (ẩn UI chọn màn)**. UI tiếng Việt; ability 1 màn không filter/scroll. Đồ họa **vector soft** (`HOT_ART` / `art.js`); không pixel combat, không shadow, map thưa. **Mobile:** portrait + floating analog stick. **Tab Hero:** panel dọc tên/khả năng/chỉ số. Data `data.js`, runtime `game.js`, locale `vi-locale.js`. 14 heroes, 7 halls, camp, Hall+Agony & Torment. Mở `index.html` là chạy. Chi tiết: `PROJECT-CONTEXT.md`.
+> Halls of Torment HTML5: vanilla JS fan prototype (repo dangminhkhai/HallsofTormentHTML5). Full unlock; Torment ladder + random hall. Vector soft `HOT_ART`. VI UI. Mobile: portrait, floating stick, world zoom ×1.48. Items Common/Uncommon/Rare; loadout cycle rarity. Balance ramp + boss phases/telegraphs. Offline Android via Capacitor → `ANDROID.md`. Data `data.js`, runtime `game.js`. Mở `index.html` hoặc cài debug APK. Chi tiết: `PROJECT-CONTEXT.md`.
 
 ---
 
-*Living doc — khi đổi architecture / constraint quan trọng, cập nhật mục 2, 5, 10, 11, 12.*
+*Living doc — cập nhật khi đổi constraint / packaging / combat.*

@@ -1,0 +1,20 @@
+{
+  "appId": "com.dangminhkhai.hallsoftorment",
+  "appName": "Halls of Torment",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#0c0a10",
+    "webContentsDebuggingEnabled": false
+  },
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "plugins": {
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0c0a10"
+    }
+  }
+}

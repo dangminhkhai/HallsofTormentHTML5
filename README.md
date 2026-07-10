@@ -1,67 +1,81 @@
 # Halls of Torment — HTML5 Prototype
 
-Browser prototype inspired by [Halls of Torment](https://hot.fandom.com/wiki/Halls_of_Torment_Wiki) (wiki mechanics, scaled for short runs).
+Browser (and **offline Android**) prototype inspired by [Halls of Torment](https://hot.fandom.com/wiki/Halls_of_Torment_Wiki) (wiki mechanics, scaled for short runs).
 
-> **For AI / full project context:** see [`PROJECT-CONTEXT.md`](./PROJECT-CONTEXT.md) (constraints, features, art system, mobile stick, file map).
+> **AI / full context:** [`PROJECT-CONTEXT.md`](./PROJECT-CONTEXT.md)  
+> **Android APK:** [`ANDROID.md`](./ANDROID.md)
 
-## Play
+## Play (browser)
 
-Open `index.html` in a modern browser (Chrome / Edge / Firefox).  
-All scripts are local — no build step, no server required (`file://` works).
+Open `index.html` in Chrome / Edge / Firefox.  
+No build step — `file://` works. All scripts are local.
+
+## Play (Android offline)
+
+1. Build debug APK (see [`ANDROID.md`](./ANDROID.md)), or use a previously built file:
+   - `dist-apk/HallsOfTorment-debug.apk` (after `npm run build:apk`)
+2. Copy to phone → install (allow unknown sources).
+3. Play offline; progress is stored in the app WebView.
+
+```powershell
+# Rebuild APK (needs JDK 17 + Android SDK)
+$env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-17.0.19.10-hotspot"
+$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+$env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
+npm install
+npm run build:apk
+```
 
 ## Modes
 
 | Mode | Description |
 |------|-------------|
-| **Hall** | Pick hall · duration **5 / 10 / 15 min** · optional **Agony** |
-| **Torment** | Level ladder (clear to unlock next) · **hall is random** (no hall picker UI) · optional **Artifacts** |
+| **Hall** | Pick hall · **5 / 10 / 15 min** · optional **Agony** |
+| **Torment** | Level ladder · **hall random** (no picker) · optional **Artifacts** |
 
 ## Features
 
-- **14 Heroes** · **7 Halls** · abilities · equipment · potions / barrels  
-- **Camp:** Blessings · Well loadout · Marks · Shard shop · Settings  
-- **Item rarity:** Common / Uncommon / Rare packages  
-- **Artifacts:** full wiki set, search + presets (Torment)  
-- **Live bank:** gold & shards saved on pickup  
-- Vector soft art (`art.js`) · SFX (Web Audio) · gamepad · Vietnamese UI  
-- **Mobile:** portrait 9:16 run · floating virtual stick (analog) · pause button  
+- **14 Heroes** · **7 Halls** · abilities · equipment (Common / Uncommon / Rare)  
+- **Camp:** Blessings · Well loadout (click to cycle rarity) · Marks · Shard shop · Settings  
+- **Live bank:** gold & shards on pickup  
+- Vector soft art · Vietnamese UI · gamepad  
+- **Mobile:** portrait 9:16 · floating stick · world zoom · large HUD  
+- **Pause:** Status / Settings tabs  
+- Boss phases, charge/slam telegraphs, difficulty ramp  
 
 ## Controls
 
 | Input | Action |
 |-------|--------|
 | `WASD` | Move |
-| `Esc` / `P` | Pause · build summary · settings |
-| Gamepad | Stick / D-pad move · Start pause |
-| Touch (mobile) | Tap-drag anywhere for floating stick · pause button top-right |
-
-Toggle the stick under **Camp → Settings** or pause settings (**Cần xoay**).
+| `Esc` / `P` | Pause |
+| Gamepad | Stick / D-pad · Start pause |
+| Touch | Floating stick · pause button (mobile only) |
 
 ## Menu tabs
 
 | Tab | Content |
 |-----|---------|
-| **Chơi** | Mode · hall grid (Hall only) · duration / Agony or Torment level + artifacts · start |
-| **Anh hùng** | Roster by damage type · stats compare · skill blurb · pick hero |
+| **Chơi** | Mode · hall (Hall only) · duration / Agony or Torment + artifacts · start |
+| **Anh hùng** | Roster · stats · skill · pick hero |
 | **Trại** | Blessings · Well · Marks · Shards · Settings |
 
-## Files
+## Project layout
 
-| File | Role |
+| Path | Role |
 |------|------|
-| `index.html` | Shell UI + mobile controls |
-| `style.css` | Layout / theme / mobile portrait |
-| `data.js` | Heroes, items, marks, artifacts, halls… |
-| `game.js` | Runtime · combat · meta · joystick |
-| `sfx.js` | Procedural audio |
-| `art.js` | **Vector soft design system** |
-| `ability-icons.js` · `menu-portraits.js` · `hall-art.js` | Icons / portraits / hall art |
+| `index.html` · `style.css` · `game.js` · `data.js` · … | Web game |
+| `art.js` | Vector soft design system |
+| `package.json` · `capacitor.config.json` | Capacitor Android wrapper |
+| `scripts/` | `sync-www.js`, `build-apk.js`, SDK setup |
+| `android/` | Native project (generated/maintained by Capacitor) |
+| `ANDROID.md` | APK install & rebuild |
 
 ## Meta save
 
-Progress: `localStorage` key `hot_proto_meta_v3`.  
-Settings (SFX, gamepad, joystick): `hot_proto_settings_v1`.  
-Clear meta via **Camp → Settings**.
+- Progress: `localStorage` `hot_proto_meta_v3`  
+- Settings: `hot_proto_settings_v1`  
+- Clear: **Camp → Settings**
 
 ## License / note
 
