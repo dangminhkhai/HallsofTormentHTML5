@@ -708,15 +708,28 @@ window.HOT_DATA = (() => {
     ],
   };
 
-  /** Balance — tuned for 5/15/30m + Agony/Torment */
+  /**
+   * Balance — short browser runs (5/10/15m) + Agony/Torment.
+   * Curve: early breathing room → mid ramp → late pressure → boss spike.
+   */
   const BALANCE = {
-    xpMul: 1.08,
-    goldMul: 1.12,
-    earlySpawnEase: 1.15,
-    playerDmgMul: 1.06,
-    hallStrengthEase: 0.9,
-    /** Long runs: slightly more XP near end so builds come online */
-    lateXpBoost: 0.12,
+    xpMul: 1.14,
+    goldMul: 1.18,
+    /** Spawn interval multiplier in first ~20% of run (higher = slower) */
+    earlySpawnEase: 1.32,
+    /** Soft global player weapon dmg (abilities use own scales) */
+    playerDmgMul: 1.05,
+    /** Compress hallStrength max a bit so late isn't absurd */
+    hallStrengthEase: 0.86,
+    /** XP bump after mid-run so builds come online */
+    lateXpBoost: 0.16,
+    /** Extra enemy pressure by run progress (0→1) */
+    lateEnemyHpBoost: 0.28,
+    lateEnemyDmgBoost: 0.18,
+    lateSpawnBoost: 0.22,
+    /** Boss fight length / punch */
+    bossHpMul: 1.32,
+    bossDmgMul: 1.1,
     /** Level-up reroll base gold cost (run gold) */
     rerollBaseCost: 25,
     rerollCostScale: 1.65,
@@ -855,14 +868,14 @@ window.HOT_DATA = (() => {
     // seconds of pure time to gain 1 full rank (wiki ~288s)
     secPerRank: 4 * 60 + 48,
     // scaled for short runs: still progress ranks over full runDuration
-    // meter fill uses secPerRank * (runSec/1800) so 5m run still reaches high ranks if desired
     scaleMeterToRun: true,
-    enemyHpPerRank: 0.12,
-    enemyDmgPerRank: 0.05,
-    enemySpdPerRank: 0.02,
-    spawnPerRank: 0.1,
-    championBaseInterval: 48, // seconds between champions at rank 0 agony
-    championIntervalCutPerRank: 9, // wiki -9s base spawn time per rank
+    // Each Agony rank should feel clearly harder
+    enemyHpPerRank: 0.16,
+    enemyDmgPerRank: 0.07,
+    enemySpdPerRank: 0.025,
+    spawnPerRank: 0.12,
+    championBaseInterval: 44,
+    championIntervalCutPerRank: 8,
     xpPerRankByHall: {
       haunted_caverns: 0.529,
       ember_grounds: 0.31,
@@ -1132,18 +1145,21 @@ window.HOT_DATA = (() => {
     /** How many locked levels to show beyond unlocked (preview) */
     showLockedAhead: 3,
     absoluteMaxLevel: 99,
-    // Per-level scaling (level L means (L) stacks of pressure)
-    enemyHpPerLevel: 1.14, // multiplicative ^L
-    enemyDmgPerLevel: 0.06, // +6% dmg per level
-    enemySpdPerLevel: 0.025,
-    spawnPerLevel: 0.08,
-    elitePerLevel: 0.12,
-    xpPerLevel: 0.08,
-    goldPerLevel: 0.05,
-    shardPerLevel: 0.1,
-    champIntervalBase: 42,
-    champIntervalCutPerLevel: 2.5, // faster champions each level
-    champIntervalMin: 10,
+    // Per-level scaling (level L). L1 soft entry; later levels spike via ^L HP
+    enemyHpPerLevel: 1.13,
+    enemyDmgPerLevel: 0.065,
+    enemySpdPerLevel: 0.028,
+    spawnPerLevel: 0.09,
+    elitePerLevel: 0.14,
+    xpPerLevel: 0.09,
+    goldPerLevel: 0.06,
+    shardPerLevel: 0.11,
+    champIntervalBase: 40,
+    champIntervalCutPerLevel: 2.4,
+    champIntervalMin: 9,
+    /** Soften first Torment level for ladder entry */
+    level1HpMul: 0.9,
+    level1DmgMul: 0.94,
     /** Default Torment duration id */
     defaultDurationId: "10",
   };
@@ -1986,16 +2002,20 @@ window.HOT_DATA = (() => {
   };
 
   // Attach packages onto item defs (descExtra for UI)
+  // Rare = base + uncommon boost + rare growth (shown in desc)
   for (const id of ITEM_ORDER) {
     const pkg = ITEM_RARITY_PACKAGES[id];
     if (!pkg || !ITEMS[id]) continue;
     if (pkg.uncommon) {
       ITEMS[id].uncommon = pkg.uncommon;
-      ITEMS[id].descUncommon = (ITEMS[id].desc || "") + " · [U] " + (pkg.uncommon.desc || "");
+      ITEMS[id].descUncommon = (ITEMS[id].desc || "") + " · ▲ " + (pkg.uncommon.desc || "");
     }
     if (pkg.rare) {
       ITEMS[id].rare = pkg.rare;
-      ITEMS[id].descRare = (ITEMS[id].desc || "") + " · [R] " + (pkg.rare.desc || "");
+      const bits = [ITEMS[id].desc || ""];
+      if (pkg.uncommon && pkg.uncommon.desc) bits.push("▲ " + pkg.uncommon.desc);
+      bits.push("◆ " + (pkg.rare.desc || ""));
+      ITEMS[id].descRare = bits.filter(Boolean).join(" · ");
     }
   }
 

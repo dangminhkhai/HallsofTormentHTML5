@@ -14,6 +14,36 @@
   const VIEW_PORTRAIT = { w: 720, h: 1280 };
   const MAP_W = 2200;
   const MAP_H = 1400;
+  /**
+   * World zoom: mobile sees a tighter FOV so heroes/enemies/pickups render larger.
+   * Camera uses viewW/viewH (= canvas / zoom); draw() scales the world layer.
+   */
+  const WORLD_ZOOM_PORTRAIT = 1.48;
+  const WORLD_ZOOM_MOBILE_LANDSCAPE = 1.28;
+  function getWorldZoom() {
+    try {
+      if (document.body.classList.contains("run-portrait")) return WORLD_ZOOM_PORTRAIT;
+      if (typeof wantsMobileRunControls === "function" && wantsMobileRunControls()) {
+        return WORLD_ZOOM_MOBILE_LANDSCAPE;
+      }
+      // Narrow touch window without run-portrait class yet
+      if (
+        window.innerWidth <= 900 &&
+        (("ontouchstart" in window) || (navigator.maxTouchPoints > 0))
+      ) {
+        return window.innerHeight > window.innerWidth
+          ? WORLD_ZOOM_PORTRAIT
+          : WORLD_ZOOM_MOBILE_LANDSCAPE;
+      }
+    } catch (_) { /* ignore */ }
+    return 1;
+  }
+  function viewW() {
+    return W / getWorldZoom();
+  }
+  function viewH() {
+    return H / getWorldZoom();
+  }
   const DATA = window.HOT_DATA;
   if (!DATA) {
     console.error("data.js missing — load data.js before game.js");
@@ -126,8 +156,10 @@
     // camera may not exist yet at boot — safe optional recenter
     try {
       if (camera && player) {
-        camera.x = Math.max(0, Math.min(MAP_W - W, player.x - W / 2));
-        camera.y = Math.max(0, Math.min(MAP_H - H, player.y - H / 2));
+        const vw = viewW();
+        const vh = viewH();
+        camera.x = Math.max(0, Math.min(MAP_W - vw, player.x - vw / 2));
+        camera.y = Math.max(0, Math.min(MAP_H - vh, player.y - vh / 2));
       }
     } catch (_) { /* ignore */ }
   }
@@ -546,21 +578,23 @@
     const side = (Math.random() * 4) | 0;
     const margin = 40;
     const viewPad = 80;
+    const halfW = viewW() / 2;
+    const halfH = viewH() / 2;
     const cx = player.x;
     const cy = player.y;
     let x, y;
     if (side === 0) {
-      x = clamp(cx + rand(-W / 2 - viewPad, W / 2 + viewPad), margin, MAP_W - margin);
-      y = clamp(cy - H / 2 - viewPad - rand(0, 80), margin, MAP_H - margin);
+      x = clamp(cx + rand(-halfW - viewPad, halfW + viewPad), margin, MAP_W - margin);
+      y = clamp(cy - halfH - viewPad - rand(0, 80), margin, MAP_H - margin);
     } else if (side === 1) {
-      x = clamp(cx + rand(-W / 2 - viewPad, W / 2 + viewPad), margin, MAP_W - margin);
-      y = clamp(cy + H / 2 + viewPad + rand(0, 80), margin, MAP_H - margin);
+      x = clamp(cx + rand(-halfW - viewPad, halfW + viewPad), margin, MAP_W - margin);
+      y = clamp(cy + halfH + viewPad + rand(0, 80), margin, MAP_H - margin);
     } else if (side === 2) {
-      x = clamp(cx - W / 2 - viewPad - rand(0, 80), margin, MAP_W - margin);
-      y = clamp(cy + rand(-H / 2 - viewPad, H / 2 + viewPad), margin, MAP_H - margin);
+      x = clamp(cx - halfW - viewPad - rand(0, 80), margin, MAP_W - margin);
+      y = clamp(cy + rand(-halfH - viewPad, halfH + viewPad), margin, MAP_H - margin);
     } else {
-      x = clamp(cx + W / 2 + viewPad + rand(0, 80), margin, MAP_W - margin);
-      y = clamp(cy + rand(-H / 2 - viewPad, H / 2 + viewPad), margin, MAP_H - margin);
+      x = clamp(cx + halfW + viewPad + rand(0, 80), margin, MAP_W - margin);
+      y = clamp(cy + rand(-halfH - viewPad, halfH + viewPad), margin, MAP_H - margin);
     }
     return { x, y };
   }
@@ -712,29 +746,58 @@
     if (playMode === "torment" && tl > 0) {
       const L = tl;
       const cfg = TORMENT_MODE;
-      enemyHp = Math.pow(cfg.enemyHpPerLevel || 1.14, L);
-      enemyDmg = 1 + L * (cfg.enemyDmgPerLevel || 0.06);
-      enemySpd = 1 + L * (cfg.enemySpdPerLevel || 0.025);
-      spawnMul = 1 + L * (cfg.spawnPerLevel || 0.08);
-      eliteMul = 1 + L * (cfg.elitePerLevel || 0.12);
-      xpMul = 1 + L * (cfg.xpPerLevel || 0.08);
-      goldMul = 1 + L * (cfg.goldPerLevel || 0.05);
-      shardMul = 1 + L * (cfg.shardPerLevel || 0.1);
-      minibossMul = 1 + L * 0.06;
-      const base = cfg.champIntervalBase || 42;
-      const cut = cfg.champIntervalCutPerLevel || 2.5;
-      champInterval = Math.max(cfg.champIntervalMin || 10, base - L * cut);
+      enemyHp = Math.pow(cfg.enemyHpPerLevel || 1.13, L);
+      enemyDmg = 1 + L * (cfg.enemyDmgPerLevel || 0.065);
+      enemySpd = 1 + L * (cfg.enemySpdPerLevel || 0.028);
+      spawnMul = 1 + L * (cfg.spawnPerLevel || 0.09);
+      eliteMul = 1 + L * (cfg.elitePerLevel || 0.14);
+      xpMul = 1 + L * (cfg.xpPerLevel || 0.09);
+      goldMul = 1 + L * (cfg.goldPerLevel || 0.06);
+      shardMul = 1 + L * (cfg.shardPerLevel || 0.11);
+      minibossMul = 1 + L * 0.07;
+      const base = cfg.champIntervalBase || 40;
+      const cut = cfg.champIntervalCutPerLevel || 2.4;
+      champInterval = Math.max(cfg.champIntervalMin || 9, base - L * cut);
+      // Ladder entry: L1 softer so first Torment is learnable
+      if (L === 1) {
+        enemyHp *= cfg.level1HpMul != null ? cfg.level1HpMul : 0.9;
+        enemyDmg *= cfg.level1DmgMul != null ? cfg.level1DmgMul : 0.94;
+      }
     } else if (ar > 0) {
-      enemyHp = 1 + ar * (AGONY_CFG.enemyHpPerRank || 0.12);
-      enemyDmg = 1 + ar * (AGONY_CFG.enemyDmgPerRank || 0.05);
-      enemySpd = 1 + ar * (AGONY_CFG.enemySpdPerRank || 0.02);
-      spawnMul = 1 + ar * (AGONY_CFG.spawnPerRank || 0.1);
+      enemyHp = 1 + ar * (AGONY_CFG.enemyHpPerRank || 0.16);
+      enemyDmg = 1 + ar * (AGONY_CFG.enemyDmgPerRank || 0.07);
+      enemySpd = 1 + ar * (AGONY_CFG.enemySpdPerRank || 0.025);
+      spawnMul = 1 + ar * (AGONY_CFG.spawnPerRank || 0.12);
       const hallId = currentHall && currentHall.id;
       const xpR = (AGONY_CFG.xpPerRankByHall && AGONY_CFG.xpPerRankByHall[hallId]) || 0.25;
       xpMul = 1 + ar * xpR;
-      const champBase = AGONY_CFG.championBaseInterval || 48;
-      const champCut = AGONY_CFG.championIntervalCutPerRank || 9;
+      const champBase = AGONY_CFG.championBaseInterval || 44;
+      const champCut = AGONY_CFG.championIntervalCutPerRank || 8;
       champInterval = Math.max(12, champBase - ar * champCut);
+    }
+
+    // Hall runs: ramp pressure by time so late minutes bite without Agony
+    if (playMode === "hall" || playMode === "torment") {
+      try {
+        const p = typeof runProgress === "function" ? runProgress() : 0;
+        if (p > 0.01) {
+          const lateHp = BALANCE.lateEnemyHpBoost != null ? BALANCE.lateEnemyHpBoost : 0.28;
+          const lateDmg = BALANCE.lateEnemyDmgBoost != null ? BALANCE.lateEnemyDmgBoost : 0.18;
+          const lateSp = BALANCE.lateSpawnBoost != null ? BALANCE.lateSpawnBoost : 0.22;
+          // Smoothstep late half of run
+          const t = clamp((p - 0.25) / 0.75, 0, 1);
+          const ease = t * t * (3 - 2 * t);
+          enemyHp *= 1 + ease * lateHp;
+          enemyDmg *= 1 + ease * lateDmg;
+          spawnMul *= 1 + ease * lateSp;
+          if (p > 0.55) eliteMul *= 1 + (p - 0.55) * 0.35;
+        }
+        // Late XP for builds to finish
+        if (p > 0.5) {
+          const lateXp = BALANCE.lateXpBoost != null ? BALANCE.lateXpBoost : 0.16;
+          xpMul *= 1 + (p - 0.5) * 2 * lateXp;
+        }
+      } catch (_) { /* ignore before run */ }
     }
 
     // Optional Torment Artifacts — wiki 1:1 mods stack on top of level
@@ -865,6 +928,8 @@
     const str = hallStrengthAt(1);
     const diff = getDiffMods();
     const bossXp = Math.round(NORMAL_REF_XP * XP_MUL_BOSS * (diff.xpMul || 1));
+    const bHp = (BALANCE.bossHpMul != null ? BALANCE.bossHpMul : 1.32);
+    const bDmg = (BALANCE.bossDmgMul != null ? BALANCE.bossDmgMul : 1.1);
     boss = {
       type: "boss",
       sprite: "brute",
@@ -875,22 +940,25 @@
       x: pos.x,
       y: pos.y,
       r: bd.r,
-      hp: bd.hp * str * 0.85 * diff.enemyHp,
-      maxHp: bd.hp * str * 0.85 * diff.enemyHp,
-      speed: bd.speed * Math.min(1.35, diff.enemySpd),
-      dmg: bd.dmg * (0.9 + str * 0.1) * diff.enemyDmg,
+      hp: bd.hp * str * bHp * diff.enemyHp,
+      maxHp: bd.hp * str * bHp * diff.enemyHp,
+      speed: bd.speed * Math.min(1.4, 0.95 * diff.enemySpd + 0.05),
+      dmg: bd.dmg * (0.95 + str * 0.12) * diff.enemyDmg * bDmg,
       color: bd.color,
       xp: bossXp,
       hitFlash: 0,
       ai: "chase",
-      aiTimer: 1.5,
+      aiTimer: 1.8,
       phase: 1,
+      lastPhase: 1,
       chargeVx: 0,
       chargeVy: 0,
       slamTelegraph: 0,
+      chargeTelegraph: 0,
+      phaseFlash: 0,
       atkCd: 0.5,
       pattern: null,
-      atk: { active: false, phase: 0, t: 0, progress: 0, didHit: false, phaseDur: [0.22, 0.12, 0.25] },
+      atk: { active: false, phase: 0, t: 0, progress: 0, didHit: false, phaseDur: [0.28, 0.12, 0.28] },
     };
     boss.pattern = (bd && bd.pattern) || (typeof bossPatternKey === "function" ? bossPatternKey() : "pain");
     enemies.push(boss);
@@ -940,12 +1008,7 @@
         const base = player.damage * dmgMul * (BALANCE.playerDmgMul || 1) * (s === 0 ? 1 : 0.72);
         const dealt = calcDamageWithStacks(base, stacks, player.critBonus || 0);
         damageEnemy(e, dealt, stacks > 0, weaponHitOpts());
-        if (stacks > 1) {
-          floatingTexts.push({
-            x: e.x, y: e.y - e.r - 18,
-            text: `CHÍ MẠNG×${stacks}`, life: 0.5, maxLife: 0.5, color: "#ffd070", vy: -45,
-          });
-        }
+        // Multi-crit: bigger red numbers only (no "CHÍ MẠNG" plate)
         if (player.weaponHealOnHit && player.hp < player.maxHp) {
           player.hp = Math.min(player.maxHp, player.hp + player.weaponHealOnHit);
         }
@@ -1175,11 +1238,13 @@
 
   // ─── Enemy attack frames ─────────────────────────────────
   function enemyAtkDurations(e) {
-    if (e.isBoss) return [0.22, 0.12, 0.28];
-    if (e.isMiniboss) return [0.18, 0.1, 0.22];
-    if (e.sprite === "brute" || e.type === "skeleton" || e.type === "brute") return [0.22, 0.12, 0.28];
-    if (e.sprite === "runner" || e.type === "hellhound" || e.type === "runner") return [0.1, 0.07, 0.14];
-    return [0.14, 0.09, 0.16]; // grunt
+    // Longer windup (phase 0) = readable telegraph, snappy strike
+    if (e.isBoss) return [0.32, 0.12, 0.3];
+    if (e.isMiniboss) return [0.24, 0.1, 0.24];
+    if (e.isElite || e.isChampion) return [0.2, 0.09, 0.18];
+    if (e.sprite === "brute" || e.type === "skeleton" || e.type === "brute") return [0.24, 0.12, 0.28];
+    if (e.sprite === "runner" || e.type === "hellhound" || e.type === "runner") return [0.12, 0.07, 0.14];
+    return [0.16, 0.09, 0.16]; // grunt
   }
 
   function enemyAtkCooldown(e) {
@@ -1465,7 +1530,24 @@
       final *= 1 + Math.min(0.4, burning * 0.01);
     }
     e.hp -= final;
-    e.hitFlash = isCritish ? 0.16 : 0.12;
+    e.hitFlash = isCritish ? 0.18 : 0.12;
+    const bigHitSpark = final >= (player ? player.damage * 1.8 : 40) || isCritish;
+    // Hit spark (combat feel)
+    {
+      const n = isCritish ? 7 : bigHitSpark ? 4 : 2;
+      for (let i = 0; i < n; i++) {
+        const a = rand(0, Math.PI * 2);
+        particles.push({
+          x: e.x, y: e.y - e.r * 0.2,
+          vx: Math.cos(a) * rand(40, isCritish ? 140 : 90),
+          vy: Math.sin(a) * rand(40, isCritish ? 140 : 90),
+          life: isCritish ? 0.32 : 0.22,
+          maxLife: isCritish ? 0.32 : 0.22,
+          color: isCritish ? "#ff8060" : "#ffe8c0",
+          size: isCritish ? rand(2.5, 5) : rand(1.5, 3.2),
+        });
+      }
+    }
     if (hitOpts) applyHitEffects(e, Object.assign({ baseDmg: dmg }, hitOpts));
     onItemWeaponHit(e, final, isCritish, hitOpts);
     if (player) {
@@ -1876,9 +1958,34 @@
     const dr = defenseReduction(def);
     const final = Math.max(1, incoming * (1 - dr));
     player.hp -= final;
-    player.invuln = 0.4;
+    player.invuln = 0.42;
+    player.hurtFlash = 0.22;
     sfx("hurt");
-    addShake(6 + Math.min(8, final * 0.15));
+    addShake(7 + Math.min(10, final * 0.18));
+    // Red hurt flash (combat feel) — separate from gold crit flash
+    hitFlashScreen = Math.max(hitFlashScreen, Math.min(0.55, 0.22 + final * 0.008));
+    player._hurtTint = 1; // draw uses hurtFlash
+    floatingTexts.push({
+      x: player.x + rand(-4, 4),
+      y: player.y - (player.r || 14) - 8,
+      text: `-${Math.round(final)}`,
+      life: 0.7,
+      maxLife: 0.7,
+      color: "#ff6060",
+      vy: -38,
+      scale: 1.1,
+    });
+    // Blood sparks
+    for (let i = 0; i < 6; i++) {
+      const a = rand(0, Math.PI * 2);
+      particles.push({
+        x: player.x, y: player.y,
+        vx: Math.cos(a) * rand(30, 90),
+        vy: Math.sin(a) * rand(30, 90),
+        life: 0.28, maxLife: 0.28,
+        color: "#c03040", size: rand(2, 4),
+      });
+    }
 
     // Item on-hurt
     if (player.itemDefiantPlate) {
@@ -2092,29 +2199,34 @@
     // Clear all trash before the Lord arrives
     clearAllNonBossEnemies();
     phase = "boss_announce";
-    phaseTimer = 2.8;
+    phaseTimer = 3.2;
     const bName = (currentHall && currentHall.boss && currentHall.boss.name) || "Lord";
-    showBanner("BOSS", `${bName} thức tỉnh`);
+    showBanner("BOSS", `${bName} thức tỉnh · dọn sân`);
     sfx("boss");
-    addShake(8);
+    addShake(10);
+    hitFlashScreen = Math.max(hitFlashScreen, 0.35);
     updateHud();
   }
 
   function spawnIntervalForProgress(p) {
     const sp = (currentHall && currentHall.spawn) || { baseInterval: 1.3, minInterval: 0.32, burstBase: 1 };
-    let iv = sp.baseInterval + (sp.minInterval - sp.baseInterval) * clamp(p, 0, 1);
-    if (p < 0.2) iv *= (BALANCE.earlySpawnEase || 1);
+    // Ease-in density: slow start, accelerate after mid
+    const t = clamp(p, 0, 1);
+    const dens = t * t * 0.55 + t * 0.45;
+    let iv = sp.baseInterval + (sp.minInterval - sp.baseInterval) * dens;
+    if (p < 0.22) iv *= (BALANCE.earlySpawnEase || 1.32);
     // Agony/Torment: more monsters = shorter interval
     const sm = getDiffMods().spawnMul || 1;
-    iv /= Math.max(0.55, Math.min(2.2, sm));
+    iv /= Math.max(0.5, Math.min(2.4, sm));
     return iv;
   }
 
   function spawnBurstCount(p) {
     const sp = (currentHall && currentHall.spawn) || { burstBase: 1 };
     const base = sp.burstBase || 1;
-    // 1 early → 2–4 late
-    return Math.min(4, base + Math.floor(p * 3 + Math.random() * (p > 0.6 ? 1.5 : 0.5)));
+    // 1 early → 2–5 late (hard modes push via spawnMul/burst add)
+    const late = p > 0.7 ? 2 : p > 0.45 ? 1 : 0;
+    return Math.min(5, base + Math.floor(p * 2.8 + Math.random() * (p > 0.55 ? 1.6 : 0.4)) + late);
   }
 
   // ─── Screens ─────────────────────────────────────────────
@@ -2246,8 +2358,8 @@
     minibossSpawned = [];
     el.bossBarWrap.classList.add("hidden");
     hideBanner();
-    camera.x = player.x - W / 2;
-    camera.y = player.y - H / 2;
+    camera.x = player.x - viewW() / 2;
+    camera.y = player.y - viewH() / 2;
     state = "playing";
     el.className.textContent = player.name;
     if (el.skillName) el.skillName.textContent = "—";
@@ -2374,31 +2486,45 @@
   /** Item description for UI including Uncommon/Rare separate effects */
   function itemDescFor(def, rarity) {
     if (!def) return "";
-    if (rarity === "uncommon" && def.descUncommon) return def.descUncommon;
-    if (rarity === "rare" && def.descRare) return def.descRare;
-    if (rarity === "uncommon" && def.uncommon && def.uncommon.desc) {
-      return (def.desc || "") + " · [U] " + def.uncommon.desc;
+    if (rarity === "rare") {
+      if (def.descRare) return def.descRare;
+      const bits = [def.desc || ""];
+      if (def.uncommon && def.uncommon.desc) bits.push("▲ " + def.uncommon.desc);
+      if (def.rare && def.rare.desc) bits.push("◆ " + def.rare.desc);
+      return bits.filter(Boolean).join(" · ");
     }
-    if (rarity === "rare" && def.rare && def.rare.desc) {
-      return (def.desc || "") + " · [R] " + def.rare.desc;
+    if (rarity === "uncommon") {
+      if (def.descUncommon) return def.descUncommon;
+      if (def.uncommon && def.uncommon.desc) {
+        return (def.desc || "") + " · ▲ " + def.uncommon.desc;
+      }
     }
     return def.desc || "";
   }
 
   /**
-   * Apply item: Common base + separate Uncommon/Rare packages (wiki Boost/Growth).
-   * No longer pure stat ×mul — each rarity has its own effect package.
+   * Apply item: Common base + Uncommon boost; Rare = Uncommon boost + Rare growth.
+   * Rare always strictly stronger than Uncommon of the same item.
    */
   function applyItemDef(def, p, rarity) {
     if (!def || !def.apply) return;
     def.apply(p);
-    if (rarity === "uncommon" && def.uncommon && typeof def.uncommon.apply === "function") {
+    const hasU = def.uncommon && typeof def.uncommon.apply === "function";
+    const hasR = def.rare && typeof def.rare.apply === "function";
+    // Uncommon & Rare both get boost package
+    if ((rarity === "uncommon" || rarity === "rare") && hasU) {
       def.uncommon.apply(p);
-    } else if (rarity === "rare" && def.rare && typeof def.rare.apply === "function") {
+    }
+    // Rare also gets growth / rare package
+    if (rarity === "rare" && hasR) {
       def.rare.apply(p);
-    } else if (rarity && rarity !== "common") {
-      // Fallback for items without packages: light slot extras only
+    } else if (rarity && rarity !== "common" && !hasU && !hasR) {
       applyRarityExtras(def, p, rarity);
+    } else if (rarity === "rare" && hasU && !hasR) {
+      // rare without package: still stronger than uncommon
+      applyRarityExtras(def, p, "rare");
+    } else if (rarity === "uncommon" && !hasU) {
+      applyRarityExtras(def, p, "uncommon");
     }
     if (p.hp > p.maxHp) p.hp = p.maxHp;
   }
@@ -2437,18 +2563,70 @@
   }
 
   function rollItemRarity(chestRarity) {
-    // chestRarity: 1 normal, 2 rare/elite, 3 boss
+    // chestRarity: 1 normal, 2 elite/miniboss, 3 boss
+    // Short browser runs: higher base U/R so players actually see "xịn" gear
     const tr = playMode === "torment" ? (tormentLevel || 1) : (agonyEnabled ? agonyRank : 0);
-    let u = 0.18 + tr * ((TORMENT_CFG.uncommonItemPerRank) || 0.05);
-    let r = 0.04 + tr * ((TORMENT_CFG.rareItemPerRank) || 0.04);
-    if (chestRarity >= 3) { u = 0.35 + tr * 0.03; r = 0.35 + tr * 0.05; }
-    else if (chestRarity >= 2) { u = 0.35 + tr * 0.04; r = 0.15 + tr * 0.04; }
-    u = Math.min(0.55, u);
-    r = Math.min(0.45, r);
+    const lv = (player && player.level) || 1;
+    const lvBonus = Math.min(0.22, Math.max(0, (lv - 1) * 0.018)); // +1.8% U/R per level, cap
+    let u = 0.34 + tr * ((TORMENT_CFG.uncommonItemPerRank) || 0.05) + lvBonus;
+    let r = 0.12 + tr * ((TORMENT_CFG.rareItemPerRank) || 0.04) + lvBonus * 0.55;
+    if (chestRarity >= 3) {
+      u = 0.28 + tr * 0.03 + lvBonus * 0.3;
+      r = 0.48 + tr * 0.05 + lvBonus * 0.4; // boss: often rare
+    } else if (chestRarity >= 2) {
+      u = 0.38 + tr * 0.04 + lvBonus * 0.35;
+      r = 0.28 + tr * 0.04 + lvBonus * 0.45; // elite: solid rare chance
+    }
+    u = Math.min(0.58, u);
+    r = Math.min(0.55, r);
+    // Normalize if u+r > 1
+    if (u + r > 0.95) {
+      const s = 0.95 / (u + r);
+      u *= s;
+      r *= s;
+    }
     const roll = Math.random();
     if (roll < r) return "rare";
     if (roll < r + u) return "uncommon";
     return "common";
+  }
+
+  /** Ensure a 3-pick chest shows better rarities so player sees upgrades */
+  function guaranteeChestRarities(options, chestRarity) {
+    if (!options || !options.length) return options;
+    const cr = chestRarity || 1;
+    const lv = (player && player.level) || 1;
+    const ranks = { common: 0, uncommon: 1, rare: 2 };
+    const setBest = (idx, want) => {
+      if (idx < 0 || idx >= options.length) return;
+      if ((ranks[options[idx].rarity] || 0) < (ranks[want] || 0)) {
+        options[idx].rarity = want;
+      }
+    };
+    // Always at least one Uncommon+ in every chest
+    const hasU = options.some((o) => o.rarity === "uncommon" || o.rarity === "rare");
+    if (!hasU) setBest(0, "uncommon");
+    // Elite/miniboss: at least one Rare
+    if (cr >= 2) {
+      const hasR = options.some((o) => o.rarity === "rare");
+      if (!hasR) setBest(options.length > 1 ? 1 : 0, "rare");
+    }
+    // Boss: at least two Rare (or one Rare + one Uncommon)
+    if (cr >= 3) {
+      setBest(0, "rare");
+      setBest(1, "rare");
+      if (options.length > 2 && options[2].rarity === "common") setBest(2, "uncommon");
+    }
+    // Mid-run normal chests (lv≥6): second pick at least Uncommon
+    if (cr <= 1 && lv >= 6 && options.length > 1) {
+      if (options[1].rarity === "common") setBest(1, "uncommon");
+    }
+    // Late-run (lv≥10): normal chests can show a Rare
+    if (cr <= 1 && lv >= 10) {
+      const hasR = options.some((o) => o.rarity === "rare");
+      if (!hasR) setBest(options.length - 1, "rare");
+    }
+    return options;
   }
 
   function equipLoadout(p, loadout) {
@@ -2547,15 +2725,43 @@
     return true;
   }
 
+  const LOADOUT_RARITY_CYCLE = ["common", "uncommon", "rare"];
+
+  function loadoutEntryRarity(entry) {
+    if (entry == null) return "common";
+    if (typeof entry === "string") return "common";
+    return entry.rarity || "common";
+  }
+
+  function nextLoadoutRarity(cur) {
+    const i = LOADOUT_RARITY_CYCLE.indexOf(cur || "common");
+    if (i < 0) return "uncommon";
+    if (i >= LOADOUT_RARITY_CYCLE.length - 1) return null; // after rare → remove
+    return LOADOUT_RARITY_CYCLE[i + 1];
+  }
+
+  /**
+   * Well loadout: first click equip Common; re-click cycles
+   * Thường → Hiếm vừa → Cực hiếm → gỡ.
+   * Full unlock prototype — no gold cost for starting rarity.
+   */
   function toggleLoadoutItem(id) {
     const def = ITEMS[id];
     if (!def) return;
     meta.loadout = meta.loadout || [];
-    // normalize string ids
     const i = meta.loadout.findIndex((e) => itemIdOf(e) === id);
     if (i >= 0) {
-      meta.loadout.splice(i, 1);
-      toast(`− ${def.name}`, "warn", 1200);
+      const cur = loadoutEntryRarity(meta.loadout[i]);
+      const next = nextLoadoutRarity(cur);
+      if (!next) {
+        meta.loadout.splice(i, 1);
+        toast(`− ${def.name}`, "warn", 1200);
+      } else {
+        meta.loadout[i] = makeItemEntry(id, next);
+        const rm = rarityMeta(next);
+        const mark = next === "rare" ? "◆" : next === "uncommon" ? "▲" : "";
+        toast(`${mark} ${def.name} · ${rm.label}`, "good", 1400);
+      }
     } else {
       const slot = def.slot || "ring";
       const lim = slotLimit(slot);
@@ -2569,13 +2775,15 @@
         toast("Trang bị khởi đầu đầy (7 món)", "warn");
         return;
       }
-      meta.loadout.push(id); // loadout always Common base
-      toast(`+ ${def.name}`, "good", 1200);
+      // First equip defaults to Common; re-click to upgrade rarity
+      meta.loadout.push(makeItemEntry(id, "common"));
+      toast(`+ ${def.name} · Thường (bấm lại ↑ độ hiếm)`, "good", 1600);
     }
     saveMeta();
     rebuildCampUI();
     updateLoadoutLabel();
     updateStartButton();
+    sfx("ui");
   }
 
   function clearLoadout() {
@@ -2587,10 +2795,25 @@
 
   function updateLoadoutLabel() {
     const elL = document.getElementById("pick-loadout-label");
-    const n = (meta.loadout || []).length;
-    if (elL) elL.textContent = `Trang bị khởi đầu: ${n}/${MAX_LOADOUT}`;
+    const list = meta.loadout || [];
+    const n = list.length;
+    let u = 0;
+    let r = 0;
+    for (const e of list) {
+      const rar = loadoutEntryRarity(e);
+      if (rar === "rare") r++;
+      else if (rar === "uncommon") u++;
+    }
+    let extra = "";
+    if (u || r) {
+      const bits = [];
+      if (u) bits.push(`${u}▲`);
+      if (r) bits.push(`${r}◆`);
+      extra = ` · ${bits.join(" ")}`;
+    }
+    if (elL) elL.innerHTML = `Trang bị khởi đầu: <strong>${n}/${MAX_LOADOUT}</strong>${extra}`;
     const cnt = document.getElementById("loadout-count");
-    if (cnt) cnt.textContent = `${n} / ${MAX_LOADOUT}`;
+    if (cnt) cnt.textContent = n ? `${n}/${MAX_LOADOUT}${extra}` : `0 / ${MAX_LOADOUT}`;
     if (typeof updateHeroStatPanel === "function") updateHeroStatPanel();
   }
 
@@ -4042,6 +4265,38 @@
     updateLoadoutLabel();
   }
 
+  function setPauseTab(tab) {
+    const id = tab === "settings" ? "settings" : "status";
+    document.querySelectorAll(".pause-subtab").forEach((b) => {
+      b.classList.toggle("selected", b.dataset.pauseTab === id);
+    });
+    document.querySelectorAll(".pause-tab-panel").forEach((p) => {
+      const match = p.dataset.pausePanel === id;
+      p.classList.toggle("hidden", !match);
+    });
+  }
+
+  function wirePauseTabs() {
+    const nav = document.querySelector(".pause-subtabs");
+    if (!nav || nav.dataset.wired) return;
+    nav.dataset.wired = "1";
+    nav.querySelectorAll(".pause-subtab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        setPauseTab(btn.dataset.pauseTab || "status");
+        sfx("ui");
+      });
+    });
+  }
+
+  function enterPause(playSfx) {
+    state = "pause";
+    if (playSfx !== false) sfx("pause");
+    setPauseTab("status");
+    fillBuildSummary();
+    if (typeof syncSettingsUI === "function") syncSettingsUI();
+    showScreen("pause");
+  }
+
   function fillBuildSummary() {
     const box = document.getElementById("build-summary");
     if (!box || !player) return;
@@ -4120,7 +4375,15 @@
       if (!raw) return defaultMeta();
       const m = JSON.parse(raw);
       const loadout = Array.isArray(m.loadout)
-        ? m.loadout.filter((e) => ITEMS[itemIdOf(e)]).slice(0, MAX_LOADOUT)
+        ? m.loadout
+          .filter((e) => ITEMS[itemIdOf(e)])
+          .slice(0, MAX_LOADOUT)
+          .map((e) => {
+            const id = itemIdOf(e);
+            let rar = itemRarityOf(e) || "common";
+            if (rar !== "common" && rar !== "uncommon" && rar !== "rare") rar = "common";
+            return makeItemEntry(id, rar);
+          })
         : [];
       return {
         gold: m.gold || 0,
@@ -4589,6 +4852,7 @@
     bindCheck("pause-set-gamepad", "gamepad", false);
     bindCheck("set-joystick", "joystick", true);
     bindCheck("pause-set-joystick", "joystick", true);
+    wirePauseTabs();
 
     const clearBtn = document.getElementById("btn-clear-meta");
     if (clearBtn && !clearBtn.dataset.wired) {
@@ -4663,7 +4927,10 @@
     const grid = document.getElementById("well-grid");
     if (!grid) return;
     grid.innerHTML = "";
-    const load = new Set((meta.loadout || []).map(itemIdOf));
+    const loadMap = Object.create(null);
+    for (const e of meta.loadout || []) {
+      loadMap[itemIdOf(e)] = loadoutEntryRarity(e);
+    }
     const slotOrder = ["helmet", "amulet", "ring", "chest", "boots", "gloves"];
     for (const slot of slotOrder) {
       const header = document.createElement("div");
@@ -4676,12 +4943,25 @@
       for (const id of ITEM_ORDER) {
         const it = ITEMS[id];
         if (!it || it.slot !== slot) continue;
-        const on = load.has(id);
-        const col = it.color || "#d4a84b";
+        const on = loadMap[id] != null;
+        const rar = on ? loadMap[id] : null;
+        const rm = rar ? rarityMeta(rar) : null;
+        const col = (rm && rm.color) || it.color || "#d4a84b";
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = "camp-card camp-card-item" + (on ? " selected" : "");
-        btn.title = `${it.name}: ${it.desc || ""}`;
+        btn.className =
+          "camp-card camp-card-item" +
+          (on ? " selected" : "") +
+          (rar === "uncommon" ? " loadout-u" : rar === "rare" ? " loadout-r" : "");
+        const nextHint =
+          rar === "common"
+            ? "Bấm lại → Hiếm vừa ▲"
+            : rar === "uncommon"
+              ? "Bấm lại → Cực hiếm ◆"
+              : rar === "rare"
+                ? "Bấm lại → gỡ"
+                : "Bấm → trang bị (Thường)";
+        btn.title = `${it.name}${rm ? " [" + rm.label + "]" : ""}: ${itemDescFor(it, rar || "common")}\n${nextHint}`;
 
         const icon = document.createElement("canvas");
         icon.className = "camp-card-icon item-well-icon";
@@ -4697,10 +4977,21 @@
 
         const body = document.createElement("div");
         body.className = "camp-card-body";
+        const descShow = on ? itemDescFor(it, rar) : (it.desc || "");
+        const status = on
+          ? `<span class="camp-cost loadout-rar-line" style="color:${col}">` +
+            `ĐANG ĐEO · <strong>${rm.label}</strong>` +
+            (rar === "common" ? " → bấm ↑ Hiếm vừa" : rar === "uncommon" ? " → bấm ↑ Cực hiếm" : " → bấm gỡ") +
+            `</span>`
+          : `<span class="camp-cost">Bấm · khởi đầu Thường · bấm lại nâng độ hiếm</span>`;
         body.innerHTML =
-          `<strong style="color:${col}">${it.name}</strong>` +
-          `<span class="camp-card-desc">${it.desc || ""}</span>` +
-          `<span class="camp-cost">${on ? "ĐANG ĐEO · Thường" : "Bấm · trang bị khởi đầu · Thường"}</span>`;
+          `<strong style="color:${col}">${it.name}` +
+          (on
+            ? `<span class="rar-badge rar-badge-${rar}" style="color:${col};border-color:${col}">${rm.label}</span>`
+            : "") +
+          `</strong>` +
+          `<span class="camp-card-desc">${descShow}</span>` +
+          status;
 
         btn.appendChild(icon);
         btn.appendChild(body);
@@ -5911,6 +6202,7 @@
   }
 
   function openItemPick(chestRarity) {
+    const cr = chestRarity || 1;
     const owned = new Set((player.items || []).map(itemIdOf));
     let pool = ITEM_ORDER.filter((id) => {
       const it = ITEMS[id];
@@ -5921,18 +6213,36 @@
     if (!pool.length) pool = ITEM_ORDER.slice();
     const options = shuffle(pool).slice(0, 3).map((id) => ({
       id,
-      rarity: rollItemRarity(chestRarity || 1),
+      rarity: rollItemRarity(cr),
     }));
+    guaranteeChestRarities(options, cr);
+    // Prefer showing higher rarity first (visual)
+    options.sort((a, b) => {
+      const rank = { rare: 2, uncommon: 1, common: 0 };
+      return (rank[b.rarity] || 0) - (rank[a.rarity] || 0);
+    });
     state = "levelup";
     levelUpMode = "item_chest";
     sfx("chest");
     el.upgradeOptions.innerHTML = "";
     const title = el.levelup && el.levelup.querySelector("h2");
     const sub = document.getElementById("levelup-sub") || (el.levelup && el.levelup.querySelector("p"));
-    if (title) title.textContent = chestRarity >= 3 ? "RƯƠNG CHÚA TỂ" : chestRarity >= 2 ? "RƯƠNG HIẾM" : "RƯƠNG";
+    if (title) {
+      title.textContent =
+        cr >= 3 ? "RƯƠNG CHÚA TỂ" : cr >= 2 ? "RƯƠNG TINH ANH" : "RƯƠNG TRANG BỊ";
+    }
     if (sub) {
+      const best = options.reduce((m, o) => {
+        const rank = { rare: 2, uncommon: 1, common: 0 };
+        return (rank[o.rarity] || 0) > (rank[m] || 0) ? o.rarity : m;
+      }, "common");
+      const bestLab = rarityMeta(best).label || best;
+      const bestCol = rarityMeta(best).color || "#d4a84b";
       sub.innerHTML =
-        `Chọn 1 trang bị · Thường / Hiếm vừa / Cực hiếm · <span style="color:#d4a84b">${ITEM_ORDER.length} món gốc</span>`;
+        `Chọn 1 · có <strong style="color:${bestCol}">${bestLab}</strong> trở lên · ` +
+        `<span style="color:#a0a8b0">Thường</span> / ` +
+        `<span style="color:#50c070">Hiếm vừa ▲</span> / ` +
+        `<span style="color:#c080e0">Cực hiếm ◆</span>`;
     }
     options.forEach((opt) => {
       const itemId = opt.id;
@@ -5956,10 +6266,19 @@
       body.className = "pick-body";
       const titleEl = document.createElement("strong");
       titleEl.style.color = rm.color || it.color;
-      titleEl.innerHTML = `${it.name}<span class="rar-badge" style="color:${rm.color || it.color}">${rm.label || ""}</span>`;
+      const rarMark = opt.rarity === "rare" ? "◆ " : opt.rarity === "uncommon" ? "▲ " : "";
+      titleEl.innerHTML =
+        `${rarMark}${it.name}` +
+        `<span class="rar-badge rar-badge-${opt.rarity || "common"}" style="color:${rm.color || it.color};border-color:${rm.color || it.color}">` +
+        `${rm.label || ""}</span>`;
       const metaEl = document.createElement("span");
       metaEl.style.color = rm.color || it.color;
-      metaEl.textContent = `${slotLab} · hiệu ứng riêng theo độ hiếm`;
+      metaEl.textContent =
+        opt.rarity === "rare"
+          ? `${slotLab} · Cực hiếm: Boost + Sinh trưởng`
+          : opt.rarity === "uncommon"
+            ? `${slotLab} · Hiếm vừa: Boost mạnh hơn Thường`
+            : `${slotLab} · Thường`;
       const descEl = document.createElement("span");
       descEl.textContent = itemDescFor(it, opt.rarity);
       body.appendChild(titleEl);
@@ -5969,7 +6288,7 @@
       btn.appendChild(body);
       btn.addEventListener("click", () => {
         equipItem(itemId, opt.rarity);
-        toast(`${it.name} (${rm.label || opt.rarity})`, "good", 1400);
+        toast(`${rarMark}${it.name} · ${rm.label || opt.rarity}`, "good", 1600);
         sfx("pickup");
         state = "playing";
         showScreen("game");
@@ -6212,7 +6531,7 @@
           color: "#c080e0", style: "burst",
         });
         if (dist(e, player) <= range + player.r) {
-          damagePlayer(26);
+          damagePlayer(e.dmg * 1.2, e);
         }
         e.ai = "chase";
         e.aiTimer = 1.2;
@@ -6241,7 +6560,7 @@
         e.chargeVy = (dy / d) * spd;
       } else if (roll < 0.6) {
         e.ai = "slam";
-        e.aiTimer = 0.8;
+        e.aiTimer = 0.9;
       } else {
         e.aiTimer = 1.0;
       }
@@ -6297,34 +6616,100 @@
     e.pattern = e.pattern || bossPatternKey();
     const pat = e.pattern;
     const trail = bossTrailColor(pat);
+    if (e.phaseFlash > 0) e.phaseFlash -= dt;
 
-    // Phase: 1 full, 2 under 50%, 3 under 25%
+    // Phase: 1 full, 2 under 50%, 3 under 25% — with transition punch
+    const prevPh = e.phase || 1;
     if (e.hp < e.maxHp * 0.25) e.phase = 3;
     else if (e.hp < e.maxHp * 0.5) e.phase = 2;
     else e.phase = 1;
+    if (e.phase > prevPh) {
+      e.phaseFlash = 1.1;
+      e.lastPhase = e.phase;
+      addShake(10 + e.phase * 2);
+      hitFlashScreen = Math.max(hitFlashScreen, 0.4);
+      sfx("boss");
+      aoeFx.push({
+        x: e.x, y: e.y, r: (e.r || 40) * (1.6 + e.phase * 0.35),
+        life: 0.55, maxLife: 0.55, color: trail, style: "burst",
+      });
+      for (let i = 0; i < 18; i++) {
+        const a = Math.random() * Math.PI * 2;
+        particles.push({
+          x: e.x, y: e.y,
+          vx: Math.cos(a) * rand(80, 220),
+          vy: Math.sin(a) * rand(80, 220),
+          life: 0.55, maxLife: 0.55, color: trail, size: rand(3, 8),
+        });
+      }
+      showBanner(
+        e.phase >= 3 ? "PHA 3" : "PHA 2",
+        e.phase >= 3 ? "Chúa tể cuồng nộ!" : "Chúa tể giận dữ!",
+        1.8
+      );
+      floatingTexts.push({
+        x: e.x, y: e.y - e.r - 20,
+        text: e.phase >= 3 ? "ENRAGE!" : "PHASE UP!",
+        life: 1.1, maxLife: 1.1, color: trail, vy: -28, scale: 1.4,
+      });
+      // Brief stun before next skill
+      e.ai = "chase";
+      e.aiTimer = 0.9;
+      e.atkCd = 0.5;
+    }
     const p2 = e.phase >= 2;
     const p3 = e.phase >= 3;
+
+    // Wind-up before charge — readable telegraph
+    if (e.ai === "wind_charge") {
+      e.chargeTelegraph = Math.max(0, e.aiTimer);
+      // Track player slightly during windup
+      const dx0 = player.x - e.x;
+      const dy0 = player.y - e.y;
+      const d0 = Math.hypot(dx0, dy0) || 1;
+      e._chargeAimX = dx0 / d0;
+      e._chargeAimY = dy0 / d0;
+      if (e.aiTimer <= 0) {
+        const spd = p3 ? 440 : p2 ? 380 : 320;
+        e.chargeVx = (e._chargeAimX || 0) * spd;
+        e.chargeVy = (e._chargeAimY || 0) * spd;
+        e.ai = "charge";
+        e.aiTimer = p2 ? 0.72 : 0.85;
+        e.chargeTelegraph = 0;
+        sfx("hit_heavy");
+        addShake(4);
+      }
+      return;
+    }
 
     if (e.ai === "charge") {
       e.x += e.chargeVx * dt;
       e.y += e.chargeVy * dt;
       e.x = clamp(e.x, e.r, MAP_W - e.r);
       e.y = clamp(e.y, e.r, MAP_H - e.r);
-      if (Math.random() < 0.55) {
+      // Contact damage during charge
+      if (dist(e, player) < e.r + player.r + 6 && (player.invuln || 0) <= 0) {
+        damagePlayer(e.dmg * 0.85, e);
+      }
+      if (Math.random() < 0.6) {
         particles.push({
-          x: e.x, y: e.y, vx: rand(-20, 20), vy: rand(-20, 20),
-          life: 0.25, maxLife: 0.25, color: trail, size: 6,
+          x: e.x, y: e.y, vx: rand(-30, 30), vy: rand(-30, 30),
+          life: 0.28, maxLife: 0.28, color: trail, size: 7,
         });
       }
       // Flame charge leaves fire
-      if (pat === "flame" && Math.random() < 0.35) {
+      if (pat === "flame" && Math.random() < 0.4) {
         itemPatches.push({
-          kind: "fire", x: e.x, y: e.y, r: 20, life: 2.2, dmg: 14, burn: 0.15, color: "#e05020",
+          kind: "fire", x: e.x, y: e.y, r: 22, life: 2.4, dmg: 16, burn: 0.18, color: "#e05020",
         });
       }
       if (e.aiTimer <= 0) {
         e.ai = "chase";
-        e.aiTimer = 1.0;
+        e.aiTimer = p2 ? 0.75 : 1.05;
+        aoeFx.push({
+          x: e.x, y: e.y, r: e.r + 28,
+          life: 0.28, maxLife: 0.28, color: trail, style: "burst",
+        });
       }
       return;
     }
@@ -6333,23 +6718,26 @@
       e.slamTelegraph = e.aiTimer;
       if (e.aiTimer <= 0) {
         const range = pat === "pain" ? 150 : pat === "blight" ? 160 : 130;
-        aoeFx.push({ x: e.x, y: e.y, r: range, life: 0.4, maxLife: 0.4, color: trail, style: "burst" });
+        aoeFx.push({ x: e.x, y: e.y, r: range, life: 0.45, maxLife: 0.45, color: trail, style: "burst" });
+        addShake(8);
+        hitFlashScreen = Math.max(hitFlashScreen, 0.2);
+        sfx("hit_heavy");
         if (dist(e, player) <= range + player.r) {
-          damagePlayer(e.dmg * (pat === "pain" ? 1.4 : 1.1), e);
+          damagePlayer(e.dmg * (pat === "pain" ? 1.45 : 1.15), e);
           if (pat === "frost") player.chillTimer = Math.max(player.chillTimer || 0, 1.8);
           if (pat === "blight") player.chillTimer = Math.max(player.chillTimer || 0, 0.8);
         }
-        for (let i = 0; i < 22; i++) {
+        for (let i = 0; i < 26; i++) {
           const a = Math.random() * Math.PI * 2;
           particles.push({
             x: e.x, y: e.y,
-            vx: Math.cos(a) * rand(60, 180), vy: Math.sin(a) * rand(60, 180),
-            life: 0.45, maxLife: 0.45, color: trail, size: rand(3, 7),
+            vx: Math.cos(a) * rand(70, 200), vy: Math.sin(a) * rand(70, 200),
+            life: 0.5, maxLife: 0.5, color: trail, size: rand(3, 8),
           });
         }
-        if (pat === "discord") bossRingBurst(e, 10, 180, 0.45, trail);
+        if (pat === "discord") bossRingBurst(e, 12, 190, 0.5, trail);
         e.ai = "chase";
-        e.aiTimer = 0.9;
+        e.aiTimer = p2 ? 0.75 : 0.95;
       }
       return;
     }
@@ -6460,57 +6848,58 @@
       if (pat === "pain") {
         // Aggressive melee Lord: charge + slam + spike ring
         if (roll < 0.34) {
-          e.ai = "charge";
-          e.aiTimer = p2 ? 0.75 : 0.9;
-          const spd = p3 ? 420 : p2 ? 360 : 300;
-          e.chargeVx = (dx / d) * spd;
-          e.chargeVy = (dy / d) * spd;
-          floatingTexts.push({ x: e.x, y: e.y - e.r - 8, text: "PAIN CHARGE!", life: 0.55, maxLife: 0.55, color: trail, vy: -20 });
+          e.ai = "wind_charge";
+          e.aiTimer = p2 ? 0.48 : 0.58;
+          e._chargeAimX = dx / d;
+          e._chargeAimY = dy / d;
+          floatingTexts.push({ x: e.x, y: e.y - e.r - 8, text: "PAIN CHARGE!", life: 0.6, maxLife: 0.6, color: trail, vy: -20 });
         } else if (roll < 0.6) {
           e.ai = "slam";
-          e.aiTimer = p2 ? 0.55 : 0.75;
-          floatingTexts.push({ x: e.x, y: e.y - e.r - 8, text: "CRUSH!", life: 0.55, maxLife: 0.55, color: trail, vy: -20 });
+          e.aiTimer = p2 ? 0.7 : 0.9;
+          floatingTexts.push({ x: e.x, y: e.y - e.r - 8, text: "CRUSH!", life: 0.6, maxLife: 0.6, color: trail, vy: -20 });
         } else if (roll < 0.78 || p3) {
-          bossRingBurst(e, p3 ? 14 : 10, 200, 0.5, trail);
+          bossRingBurst(e, p3 ? 14 : 10, 200, 0.55, trail);
           floatingTexts.push({ x: e.x, y: e.y - e.r - 8, text: "SPIKE RING!", life: 0.55, maxLife: 0.55, color: trail, vy: -20 });
-          e.aiTimer = 1.1;
+          e.aiTimer = 1.15;
+          addShake(5);
         } else {
-          e.aiTimer = 0.7;
+          e.aiTimer = 0.65;
         }
       } else if (pat === "flame") {
         // Lord of Regret: fire volleys, inferno nova, fire charge
         if (roll < 0.4) {
-          bossFireRing(e, p3 ? 7 : 5, 270, 0.8, "#ff6020", 0.22);
+          bossFireRing(e, p3 ? 7 : 5, 270, 0.85, "#ff6020", 0.22);
           floatingTexts.push({ x: e.x, y: e.y - e.r - 8, text: "FIRE STORM!", life: 0.55, maxLife: 0.55, color: trail, vy: -20 });
           e.aiTimer = p2 ? 0.85 : 1.1;
+          addShake(4);
         } else if (roll < 0.65) {
           e.ai = "nova";
-          e.aiTimer = 0.45;
+          e.aiTimer = 0.55;
         } else if (roll < 0.85) {
-          e.ai = "charge";
-          e.aiTimer = 0.7;
-          e.chargeVx = (dx / d) * 320;
-          e.chargeVy = (dy / d) * 320;
-          floatingTexts.push({ x: e.x, y: e.y - e.r - 8, text: "BLAZE!", life: 0.5, maxLife: 0.5, color: trail, vy: -20 });
+          e.ai = "wind_charge";
+          e.aiTimer = 0.5;
+          e._chargeAimX = dx / d;
+          e._chargeAimY = dy / d;
+          floatingTexts.push({ x: e.x, y: e.y - e.r - 8, text: "BLAZE!", life: 0.55, maxLife: 0.55, color: trail, vy: -20 });
         } else {
           e.ai = "slam";
-          e.aiTimer = 0.7;
+          e.aiTimer = 0.85;
         }
       } else if (pat === "frost") {
         // Lord of Hate: frost nova, ice volleys, chill slam
         if (roll < 0.38) {
           e.ai = "nova";
-          e.aiTimer = 0.5;
+          e.aiTimer = 0.58;
         } else if (roll < 0.68) {
-          bossFireRing(e, 5, 190, 0.7, "#a0e0ff", 0.25);
+          bossFireRing(e, 5, 190, 0.75, "#a0e0ff", 0.25);
           floatingTexts.push({ x: e.x, y: e.y - e.r - 8, text: "ICE SHARDS!", life: 0.55, maxLife: 0.55, color: trail, vy: -20 });
           e.aiTimer = 1.15;
         } else if (roll < 0.88) {
           e.ai = "slam";
-          e.aiTimer = 0.8;
-          floatingTexts.push({ x: e.x, y: e.y - e.r - 8, text: "GLACIER!", life: 0.55, maxLife: 0.55, color: trail, vy: -20 });
+          e.aiTimer = 0.95;
+          floatingTexts.push({ x: e.x, y: e.y - e.r - 8, text: "GLACIER!", life: 0.6, maxLife: 0.6, color: trail, vy: -20 });
         } else {
-          e.aiTimer = 0.8;
+          e.aiTimer = 0.75;
         }
       } else if (pat === "despair") {
         // Lord of Despair: summons + dark volleys
@@ -6525,10 +6914,10 @@
           e.ai = "slam";
           e.aiTimer = 0.75;
         } else {
-          e.ai = "charge";
-          e.aiTimer = 0.65;
-          e.chargeVx = (dx / d) * 280;
-          e.chargeVy = (dy / d) * 280;
+          e.ai = "wind_charge";
+          e.aiTimer = 0.5;
+          e._chargeAimX = dx / d;
+          e._chargeAimY = dy / d;
         }
       } else if (pat === "discord") {
         // Lord of Discord: chaotic multi-angle
@@ -6546,10 +6935,10 @@
           e.ai = "slam";
           e.aiTimer = 0.6;
         } else {
-          e.ai = "charge";
-          e.aiTimer = 0.55;
-          e.chargeVx = (dx / d) * 340;
-          e.chargeVy = (dy / d) * 340;
+          e.ai = "wind_charge";
+          e.aiTimer = 0.48;
+          e._chargeAimX = dx / d;
+          e._chargeAimY = dy / d;
         }
       } else if (pat === "greed") {
         // Lord of Greed: gold rain, heavy coins
@@ -6587,21 +6976,21 @@
           e.ai = "slam";
           e.aiTimer = 0.75;
         } else {
-          e.ai = "charge";
-          e.aiTimer = 0.7;
-          e.chargeVx = (dx / d) * 260;
-          e.chargeVy = (dy / d) * 260;
+          e.ai = "wind_charge";
+          e.aiTimer = 0.52;
+          e._chargeAimX = dx / d;
+          e._chargeAimY = dy / d;
         }
       } else {
         // fallback
         if (roll < 0.3) {
-          e.ai = "charge";
-          e.aiTimer = 0.7;
-          e.chargeVx = (dx / d) * 300;
-          e.chargeVy = (dy / d) * 300;
+          e.ai = "wind_charge";
+          e.aiTimer = 0.55;
+          e._chargeAimX = dx / d;
+          e._chargeAimY = dy / d;
         } else if (roll < 0.55) {
           e.ai = "slam";
-          e.aiTimer = 0.8;
+          e.aiTimer = 0.9;
         } else {
           bossFireRing(e, 3, 220, 0.7, trail, 0.22);
           e.aiTimer = 1.0;
@@ -6742,6 +7131,13 @@
       // Mobile virtual stick wins — pure analog, no keyboard blend
       mx = joyX;
       my = joyY;
+      // Soft floor: very small inputs still move (avoid sticky stop while kiting)
+      const jLen = Math.hypot(mx, my);
+      if (jLen > 0.02 && jLen < 0.12) {
+        const boost = 0.12 / jLen;
+        mx *= boost;
+        my *= boost;
+      }
     } else {
       let digX = 0;
       let digY = 0;
@@ -7037,13 +7433,15 @@
       if (t.life <= 0) floatingTexts.splice(i, 1);
     }
 
-    // camera
-    const targetCx = player.x - W / 2;
-    const targetCy = player.y - H / 2;
+    // camera (uses zoomed view size on mobile so sprites fill more of the screen)
+    const vw = viewW();
+    const vh = viewH();
+    const targetCx = player.x - vw / 2;
+    const targetCy = player.y - vh / 2;
     camera.x += (targetCx - camera.x) * Math.min(1, 8 * dt);
     camera.y += (targetCy - camera.y) * Math.min(1, 8 * dt);
-    camera.x = clamp(camera.x, 0, MAP_W - W);
-    camera.y = clamp(camera.y, 0, MAP_H - H);
+    camera.x = clamp(camera.x, 0, Math.max(0, MAP_W - vw));
+    camera.y = clamp(camera.y, 0, Math.max(0, MAP_H - vh));
 
     updateHud();
   }
@@ -7162,12 +7560,14 @@
     const a = theme.floorA || "#14101c";
     const b = theme.floorB || "#100e16";
 
-    // Nền phẳng + checker nhẹ (không chi tiết rối)
+    const vw = viewW();
+    const vh = viewH();
+    // Nền phẳng (camera space = view size; scaled to full canvas by draw zoom)
     ctx.fillStyle = theme.floorC || b;
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(0, 0, vw + 2, vh + 2);
 
-    for (let x = startX; x < camera.x + W + tile; x += tile) {
-      for (let y = startY; y < camera.y + H + tile; y += tile) {
+    for (let x = startX; x < camera.x + vw + tile; x += tile) {
+      for (let y = startY; y < camera.y + vh + tile; y += tile) {
         const gx = (x / tile) | 0;
         const gy = (y / tile) | 0;
         const sx = x - camera.x;
@@ -7190,7 +7590,7 @@
       for (let i = 0; i < seeds.length; i++) {
         const px = ((i * seeds[i][0] + 120) % MAP_W) - camera.x;
         const py = ((i * seeds[i][1] + 90) % MAP_H) - camera.y;
-        if (px > -40 && px < W + 40 && py > -40 && py < H + 40) {
+        if (px > -40 && px < vw + 40 && py > -40 && py < vh + 40) {
           window.HOT_ART.drawSoftFloorAccent(ctx, px, py, style, theme.accent);
         }
       }
@@ -7201,7 +7601,7 @@
         for (let i = 0; i < 6; i++) {
           const px = ((i * 317) % MAP_W) - camera.x;
           const py = ((i * 491) % MAP_H) - camera.y;
-          if (px > -20 && px < W + 20 && py > -20 && py < H + 20) {
+          if (px > -20 && px < vw + 20 && py > -20 && py < vh + 20) {
             ctx.beginPath();
             ctx.ellipse(px, py, 28, 10, 0.2, 0, Math.PI * 2);
             ctx.fill();
@@ -7212,7 +7612,7 @@
         for (let i = 0; i < 5; i++) {
           const px = ((i * 401) % MAP_W) - camera.x;
           const py = ((i * 277) % MAP_H) - camera.y;
-          if (px > -20 && px < W + 20 && py > -20 && py < H + 20) {
+          if (px > -20 && px < vw + 20 && py > -20 && py < vh + 20) {
             ctx.beginPath();
             ctx.ellipse(px, py, 22, 8, 0, 0, Math.PI * 2);
             ctx.fill();
@@ -7223,7 +7623,7 @@
         for (let i = 0; i < 5; i++) {
           const px = ((i * 353) % MAP_W) - camera.x;
           const py = ((i * 439) % MAP_H) - camera.y;
-          if (px > -20 && px < W + 20 && py > -20 && py < H + 20) {
+          if (px > -20 && px < vw + 20 && py > -20 && py < vh + 20) {
             ctx.beginPath();
             ctx.ellipse(px, py, 26, 12, 0, 0, Math.PI * 2);
             ctx.fill();
@@ -8464,13 +8864,7 @@
         drawSwordsmanHero(px, py, facing, bob * 0.28, flash, skillOn, pose, pal);
       }
 
-      // name tag
-      ctx.font = "bold 10px Segoe UI";
-      ctx.textAlign = "center";
-      ctx.fillStyle = "rgba(0,0,0,0.5)";
-      ctx.fillText(player.name, px + 1, py - 36);
-      ctx.fillStyle = player.color;
-      ctx.fillText(player.name, px, py - 37);
+      // (no hero name tag in-world — cleaner combat view)
 
       // subtle melee range for close-range heroes
       const meleeStyles = ["melee", "hammer", "dualaxe", "lute", "scepter"];
@@ -10096,12 +10490,19 @@
   }
 
   function draw() {
+    const zoom = getWorldZoom();
     ctx.save();
+    // Clear full canvas in screen space
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, W, H);
     if (screenShake > 0.3) {
       const mag = Math.min(14, screenShake);
       ctx.translate((Math.random() - 0.5) * mag * 2, (Math.random() - 0.5) * mag * 2);
     }
-    ctx.clearRect(-20, -20, W + 40, H + 40);
+    // Zoom world layer: mobile FOV tighter → heroes/enemies/pickups larger on screen
+    if (zoom !== 1) {
+      ctx.scale(zoom, zoom);
+    }
     drawFloor();
 
     // aoe telegraph / effects (under entities)
@@ -10142,26 +10543,89 @@
 
     drawAbilityFxLayer();
 
-    // slam telegraphs
+    // Telegraphs: slam rings · charge aim · enemy melee windup
     for (const e of enemies) {
+      const x = e.x - camera.x;
+      const y = e.y - camera.y;
+      // Boss / miniboss slam AOE
       if ((e.isBoss || e.isMiniboss) && e.ai === "slam") {
-        const range = e.isBoss ? 130 : 95;
-        const t = e.slamTelegraph || 0;
-        const x = e.x - camera.x;
-        const y = e.y - camera.y;
-        ctx.globalAlpha = 0.25 + (1 - Math.min(1, t)) * 0.35;
+        const range = e.isBoss
+          ? ((e.pattern === "pain") ? 150 : (e.pattern === "blight") ? 160 : 130)
+          : 95;
+        const t = Math.max(0, e.slamTelegraph || 0);
+        const pulse = 0.28 + (1 - Math.min(1, t / 1.1)) * 0.42;
+        ctx.globalAlpha = pulse;
         ctx.strokeStyle = e.isBoss ? "#ff6060" : "#c080e0";
-        ctx.lineWidth = 3;
+        ctx.lineWidth = e.isBoss ? 4 : 3;
         ctx.setLineDash([8, 6]);
         ctx.beginPath();
         ctx.arc(x, y, range, 0, Math.PI * 2);
         ctx.stroke();
         ctx.setLineDash([]);
-        ctx.globalAlpha = 0.12;
+        ctx.globalAlpha = pulse * 0.35;
         ctx.fillStyle = e.isBoss ? "#ff4040" : "#a060d0";
         ctx.beginPath();
         ctx.arc(x, y, range, 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      // Boss charge wind-up: dashed arrow toward player aim
+      if (e.isBoss && e.ai === "wind_charge") {
+        const ax = e._chargeAimX || 0;
+        const ay = e._chargeAimY || 0;
+        const len = 90 + (1 - Math.min(1, (e.chargeTelegraph || 0) / 0.6)) * 70;
+        ctx.save();
+        ctx.globalAlpha = 0.55;
+        ctx.strokeStyle = "#ff8060";
+        ctx.lineWidth = 4;
+        ctx.setLineDash([10, 8]);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + ax * len, y + ay * len);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // arrow head
+        const hx = x + ax * len;
+        const hy = y + ay * len;
+        const ang = Math.atan2(ay, ax);
+        ctx.fillStyle = "rgba(255, 100, 80, 0.7)";
+        ctx.beginPath();
+        ctx.moveTo(hx, hy);
+        ctx.lineTo(hx - Math.cos(ang - 0.4) * 14, hy - Math.sin(ang - 0.4) * 14);
+        ctx.lineTo(hx - Math.cos(ang + 0.4) * 14, hy - Math.sin(ang + 0.4) * 14);
+        ctx.closePath();
+        ctx.fill();
+        // warning ring
+        ctx.globalAlpha = 0.25 + Math.sin(performance.now() * 0.02) * 0.1;
+        ctx.strokeStyle = "#ff6040";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, e.r + 12, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      // Boss phase flash aura
+      if (e.isBoss && e.phaseFlash > 0) {
+        ctx.globalAlpha = Math.min(0.45, e.phaseFlash * 0.4);
+        ctx.strokeStyle = e.color || "#ff6080";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(x, y, e.r + 18 + (1 - e.phaseFlash) * 30, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      // Elite / miniboss / boss melee windup ring (atk phase 0)
+      if (e.atk && e.atk.active && e.atk.phase === 0 && (e.isBoss || e.isMiniboss || e.isElite || e.isChampion)) {
+        const wind = e.atk.progress || 0;
+        const rr = enemyMeleeRange(e) + 4;
+        ctx.globalAlpha = 0.15 + wind * 0.4;
+        ctx.strokeStyle = e.isBoss ? "#ff7070" : e.isMiniboss ? "#c080e0" : "#ffd070";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.arc(x, y, rr * (0.75 + wind * 0.25), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
         ctx.globalAlpha = 1;
       }
     }
@@ -10464,9 +10928,18 @@
     }
     ctx.globalAlpha = 1;
 
-    // Crit / boss death screen flash
+    // Back to screen space for overlays (flash / vignette / debug) — not zoomed
+    ctx.restore();
+    ctx.save();
+
+    // Screen flash: gold (boss/crit) or red when recently hurt
     if (hitFlashScreen > 0.02) {
-      ctx.fillStyle = `rgba(255, 220, 160, ${hitFlashScreen * 0.18})`;
+      const hurt = player && player.hurtFlash > 0.05;
+      if (hurt) {
+        ctx.fillStyle = `rgba(180, 30, 40, ${hitFlashScreen * 0.22})`;
+      } else {
+        ctx.fillStyle = `rgba(255, 220, 160, ${hitFlashScreen * 0.16})`;
+      }
       ctx.fillRect(0, 0, W, H);
     }
 
@@ -10521,9 +10994,7 @@
     if (startBtn && startBtn.pressed && !player._gpStartLatch) {
       player._gpStartLatch = true;
       if (state === "playing") {
-        state = "pause";
-        fillBuildSummary();
-        showScreen("pause");
+        enterPause(true);
       } else if (state === "pause") {
         state = "playing";
         showScreen("game");
@@ -10538,6 +11009,7 @@
     let dt = Math.min(0.05, (ts - lastTs) / 1000);
     lastTs = ts;
     if (hitFlashScreen > 0) hitFlashScreen = Math.max(0, hitFlashScreen - dt * 2.8);
+    if (player && player.hurtFlash > 0) player.hurtFlash = Math.max(0, player.hurtFlash - dt * 3.2);
     if (hitstop > 0) {
       hitstop = Math.max(0, hitstop - dt);
       // freeze simulation briefly; still draw
@@ -10563,10 +11035,7 @@
     if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(k)) e.preventDefault();
 
     if ((k === "escape" || k === "p") && state === "playing") {
-      state = "pause";
-      sfx("pause");
-      fillBuildSummary();
-      showScreen("pause");
+      enterPause(true);
     } else if ((k === "escape" || k === "p") && state === "pause") {
       state = "playing";
       sfx("ui");
@@ -10581,20 +11050,27 @@
     keys[e.key.toLowerCase()] = false;
   });
 
-  // ─── Mobile: floating virtual stick (spawn at touch) — tuned for accuracy ──
-  // maxR ≈ 78% of base radius · small radial deadzone · dynamic base follow · analog mag
+  // ─── Mobile: floating virtual stick (spawn at touch) ──
+  // Semi-transparent UI · larger travel · small deadzone · smooth analog · base follow
   const joyState = {
     active: false,
     id: null,
     mx: 0,
     my: 0,
+    smx: 0,
+    smy: 0,
     cx: 0,
     cy: 0,
-    maxR: 48,
-    half: 60,
-    // radial deadzone as fraction of maxR (small → more responsive micro-moves)
-    deadFrac: 0.11,
-    // outer travel before base follows finger (keeps long swipes accurate)
+    maxR: 52,
+    half: 64,
+    // small deadzone — still kills thumb jitter
+    deadFrac: 0.08,
+    // full combat speed before outer ring (easier sprint)
+    fullAt: 0.82,
+    // exponential ease for natural ramp
+    curve: 0.88,
+    // light smoothing (0 = raw, 1 = frozen)
+    smooth: 0.28,
     follow: true,
   };
 
@@ -10621,26 +11097,28 @@
       const cw = parseFloat(cs.width) || 0;
       if (cw > 20) return cw * 0.5;
     }
-    // CSS fallbacks: 128 / 118 / 104
+    // CSS fallbacks (larger stick on phone)
     if (window.matchMedia && window.matchMedia("(max-height: 500px) and (orientation: landscape)").matches) {
-      return 52;
+      return 56;
     }
     if (window.matchMedia && window.matchMedia("(max-width: 400px)").matches) {
-      return 59;
+      return 72;
     }
-    return 64;
+    return 76;
   }
 
   function syncJoystickGeometry() {
     const half = measureJoystickHalf();
     joyState.half = half;
-    // Travel radius: almost to the ring edge for clearer full-speed feel
-    joyState.maxR = Math.max(28, half * 0.78);
+    // Slightly larger travel than visual ring for easier full-speed
+    joyState.maxR = Math.max(32, half * 0.84);
   }
 
   function clearJoyInput() {
     joyState.mx = 0;
     joyState.my = 0;
+    joyState.smx = 0;
+    joyState.smy = 0;
     if (player) {
       player._joyMx = 0;
       player._joyMy = 0;
@@ -10654,6 +11132,7 @@
       zone.classList.remove("active");
       zone.classList.add("is-idle");
       zone.setAttribute("aria-hidden", "true");
+      zone.style.removeProperty("--vj-alpha");
     }
     if (st) st.style.transform = "translate3d(0px, 0px, 0)";
   }
@@ -10669,11 +11148,30 @@
     const y = clamp(clientY, safeTop, window.innerHeight - safeBot);
     zone.style.left = x + "px";
     zone.style.top = y + "px";
+    zone.style.setProperty("--vj-alpha", "0.32");
     zone.classList.remove("is-idle");
     zone.classList.add("active");
     zone.setAttribute("aria-hidden", "false");
     joyState.cx = x;
     joyState.cy = y;
+    joyState.smx = 0;
+    joyState.smy = 0;
+  }
+
+  /** True only for real phone/tablet play — never desktop mouse/keyboard */
+  function wantsMobileRunControls() {
+    try {
+      const coarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+      const noHover = window.matchMedia && window.matchMedia("(hover: none)").matches;
+      const narrow = window.innerWidth <= 900;
+      // Touch-capable laptop still has hover:hover + fine pointer → treat as PC
+      if (coarse || noHover) return true;
+      // Small touch window (phone emulation / narrow phone)
+      if (narrow && isTouchishDevice() && window.innerHeight > window.innerWidth) return true;
+      return false;
+    } catch (_) {
+      return isTouchishDevice() && window.innerWidth <= 900;
+    }
   }
 
   function updateMobileControlsVisibility() {
@@ -10683,11 +11181,12 @@
     const inGame =
       state === "playing" || state === "levelup" || state === "ability" || state === "well";
     const joyOn = settings.joystick !== false;
-    // Hiển thị chrome mobile khi đang run + bật cần xoay (hoặc màn dọc)
-    const show = inGame && (joyOn || document.body.classList.contains("run-portrait"));
+    // PC: never show joystick / pause float (even if joystick setting is on)
+    const mobilePlay = wantsMobileRunControls();
+    const show = inGame && mobilePlay;
     root.classList.toggle("hidden", !show);
     root.setAttribute("aria-hidden", show ? "false" : "true");
-    root.classList.toggle("joy-enabled", joyOn && state === "playing");
+    root.classList.toggle("joy-enabled", show && joyOn && state === "playing");
     if (!show || !joyOn || state !== "playing") {
       joyState.active = false;
       joyState.id = null;
@@ -10697,25 +11196,25 @@
   }
 
   /**
-   * Map finger offset → unit vector (-1..1) with proper radial deadzone.
-   * Dynamic base follow: when finger exceeds maxR, center slides toward finger
-   * so direction stays accurate on long swipes (standard mobile virtual pad).
+   * Finger offset → unit vector (-1..1).
+   * Radial deadzone · ease curve · light smooth · base follow · fade by push strength.
    */
   function applyJoyVector(clientX, clientY) {
     let dx = clientX - joyState.cx;
     let dy = clientY - joyState.cy;
     let len = Math.hypot(dx, dy);
-    const maxR = joyState.maxR || 48;
+    const maxR = joyState.maxR || 52;
 
-    // Dynamic recentering past outer ring
+    // Dynamic recentering: only when past maxR (smooth long swipes)
     if (joyState.follow && len > maxR && len > 0.001) {
       const over = len - maxR;
       const ux = dx / len;
       const uy = dy / len;
-      joyState.cx += ux * over;
-      joyState.cy += uy * over;
-      // Keep base on-screen
-      const half = joyState.half || 60;
+      // Follow a bit softer than 1:1 to reduce base jitter
+      const followK = 0.88;
+      joyState.cx += ux * over * followK;
+      joyState.cy += uy * over * followK;
+      const half = joyState.half || 64;
       joyState.cx = clamp(joyState.cx, half + 4, window.innerWidth - half - 4);
       joyState.cy = clamp(joyState.cy, half + 40, window.innerHeight - half - 12);
       const zone = document.getElementById("virtual-joystick");
@@ -10728,7 +11227,7 @@
       len = Math.hypot(dx, dy);
     }
 
-    // Clamp visual/input to maxR
+    // Visual knob clamped to maxR
     let vdx = dx;
     let vdy = dy;
     if (len > maxR && len > 0.001) {
@@ -10737,26 +11236,53 @@
       len = maxR;
     }
 
-    // Radial deadzone remap: 0 at dead, 1 at maxR (direction from unit vector)
-    const dead = Math.max(3, maxR * (joyState.deadFrac || 0.11));
+    const dead = Math.max(2.5, maxR * (joyState.deadFrac || 0.08));
     let nx = 0;
     let ny = 0;
+    let out = 0;
     if (len > dead) {
-      const mag = Math.min(1, (len - dead) / (maxR - dead));
-      // Slight ease-in for micro-precision near center (still linear-ish)
-      const smooth = mag * mag * (3 - 2 * mag); // smoothstep
-      // Blend 70% linear + 30% smoothstep → accurate without mushy center
-      const out = mag * 0.7 + smooth * 0.3;
+      // 0..1 after deadzone; reach full speed before outer edge (fullAt)
+      const fullAt = joyState.fullAt || 0.82;
+      let mag = (len - dead) / (maxR * fullAt - dead);
+      if (mag < 0) mag = 0;
+      if (mag > 1) mag = 1;
+      // Power curve: a bit more mid-range speed for combat kiting
+      const curve = joyState.curve || 0.88;
+      out = Math.pow(mag, curve);
       const inv = 1 / len;
       nx = dx * inv * out;
       ny = dy * inv * out;
     }
 
-    joyState.mx = nx;
-    joyState.my = ny;
+    // Light EMA smooth — kills 1-frame finger noise without laggy feel
+    const s = joyState.smooth != null ? joyState.smooth : 0.28;
+    const a = 1 - s;
+    joyState.smx = joyState.smx * s + nx * a;
+    joyState.smy = joyState.smy * s + ny * a;
+    // Snap to zero when raw is zero (release / deadzone)
+    if (out < 0.001) {
+      joyState.smx = 0;
+      joyState.smy = 0;
+    }
+    // Kill residual noise under threshold
+    const smLen = Math.hypot(joyState.smx, joyState.smy);
+    if (smLen < 0.02) {
+      joyState.smx = 0;
+      joyState.smy = 0;
+    }
+
+    joyState.mx = joyState.smx;
+    joyState.my = joyState.smy;
     if (player) {
-      player._joyMx = nx;
-      player._joyMy = ny;
+      player._joyMx = joyState.smx;
+      player._joyMy = joyState.smy;
+    }
+
+    // Fade: quieter at rest, a bit clearer when pushing (still translucent)
+    const zone = document.getElementById("virtual-joystick");
+    if (zone) {
+      const alpha = 0.28 + Math.min(1, out) * 0.18;
+      zone.style.setProperty("--vj-alpha", String(alpha));
     }
     const st = document.getElementById("vj-stick");
     if (st) st.style.transform = `translate3d(${vdx}px, ${vdy}px, 0)`;
@@ -10796,7 +11322,20 @@
       if (!joyState.active) return;
       if (joyState.id != null && e.pointerId != null && e.pointerId !== joyState.id) return;
       e.preventDefault();
-      applyJoyVector(e.clientX, e.clientY);
+      // Prefer latest coalesced sample (smoother high-rate touch on modern browsers)
+      let x = e.clientX;
+      let y = e.clientY;
+      try {
+        if (typeof e.getCoalescedEvents === "function") {
+          const list = e.getCoalescedEvents();
+          if (list && list.length) {
+            const last = list[list.length - 1];
+            x = last.clientX;
+            y = last.clientY;
+          }
+        }
+      } catch (_) { /* ignore */ }
+      applyJoyVector(x, y);
     }
     function onUp(e) {
       if (!joyState.active) return;
@@ -10833,10 +11372,7 @@
         e.preventDefault();
         e.stopPropagation();
         if (state === "playing") {
-          state = "pause";
-          sfx("pause");
-          fillBuildSummary();
-          showScreen("pause");
+          enterPause(true);
         } else if (state === "pause") {
           state = "playing";
           sfx("ui");
@@ -11339,13 +11875,16 @@
       cv.height = 72;
       paintPortrait(cv, id, 56);
 
+      // Compact badge: short code only (VL/PT/NT) — element tip via title, not on portrait
       const badge = document.createElement("span");
       badge.className = "dmg-badge";
       badge.style.color = metaT.color;
       badge.style.borderColor = metaT.color;
-      badge.textContent = metaT.short + (h.dmgElement && h.dmgElement !== dtype && h.dmgElement !== "physical" && h.dmgElement !== "magic" && h.dmgElement !== "elemental"
-        ? "·" + String(h.dmgElement).slice(0, 3).toUpperCase()
-        : "");
+      const elemKey = h.dmgElement && h.dmgElement !== dtype && h.dmgElement !== "physical" && h.dmgElement !== "magic" && h.dmgElement !== "elemental"
+        ? String(h.dmgElement).slice(0, 3).toUpperCase()
+        : "";
+      badge.textContent = elemKey || metaT.short || "";
+      badge.title = metaT.label + (elemKey ? " · " + h.dmgElement : "");
 
       const nameEl = document.createElement("span");
       nameEl.className = "card-name";
@@ -11355,6 +11894,7 @@
       skillEl.className = "card-skill";
       skillEl.textContent = h.weapon || "";
 
+      // Order: portrait → name → weapon; badge is CSS-positioned corner chip
       btn.appendChild(cv);
       btn.appendChild(badge);
       btn.appendChild(nameEl);

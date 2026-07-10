@@ -31,16 +31,17 @@
 
   // ── Loại sát thương (hiển thị đầy đủ, không rút gọn) ──
   if (D.HERO_DMG_TYPES) {
-    D.HERO_DMG_TYPES.physical = { id: "physical", label: "Vật lý", short: "Vật lý", color: "#d4a84b" };
-    D.HERO_DMG_TYPES.magic = { id: "magic", label: "Phép thuật", short: "Phép thuật", color: "#a070e0" };
-    D.HERO_DMG_TYPES.elemental = { id: "elemental", label: "Nguyên tố", short: "Nguyên tố", color: "#50c0b0" };
-    D.HERO_DMG_TYPES.other = { id: "other", label: "Khác", short: "Khác", color: "#90a0b0" };
+    // short = badge gọn (không đè portrait); label = tên đầy đủ
+    D.HERO_DMG_TYPES.physical = { id: "physical", label: "Vật lý", short: "VL", color: "#d4a84b" };
+    D.HERO_DMG_TYPES.magic = { id: "magic", label: "Phép thuật", short: "PT", color: "#a070e0" };
+    D.HERO_DMG_TYPES.elemental = { id: "elemental", label: "Nguyên tố", short: "NT", color: "#50c0b0" };
+    D.HERO_DMG_TYPES.other = { id: "other", label: "Khác", short: "K", color: "#90a0b0" };
   }
   if (D.ABILITY_DMG_TYPES) {
-    D.ABILITY_DMG_TYPES.physical = { id: "physical", label: "Vật lý", short: "Vật lý", color: "#d4a84b" };
-    D.ABILITY_DMG_TYPES.magic = { id: "magic", label: "Phép thuật", short: "Phép thuật", color: "#a070e0" };
-    D.ABILITY_DMG_TYPES.elemental = { id: "elemental", label: "Nguyên tố", short: "Nguyên tố", color: "#50c0b0" };
-    D.ABILITY_DMG_TYPES.bard = { id: "bard", label: "Thi sĩ", short: "Thi sĩ", color: "#e070b0" };
+    D.ABILITY_DMG_TYPES.physical = { id: "physical", label: "Vật lý", short: "VL", color: "#d4a84b" };
+    D.ABILITY_DMG_TYPES.magic = { id: "magic", label: "Phép thuật", short: "PT", color: "#a070e0" };
+    D.ABILITY_DMG_TYPES.elemental = { id: "elemental", label: "Nguyên tố", short: "NT", color: "#50c0b0" };
+    D.ABILITY_DMG_TYPES.bard = { id: "bard", label: "Thi sĩ", short: "TS", color: "#e070b0" };
   }
 
   // ── Độ hiếm / slot trang bị ──
@@ -452,8 +453,15 @@
           .replace(/\bCrit\b/g, "Chí mạng")
           .replace(/\blevels?\b/gi, "cấp");
       }
-      if (it.descUncommon) it.descUncommon = (it.desc || "") + " · [Hiếm vừa] " + ((it.uncommon && it.uncommon.desc) || "");
-      if (it.descRare) it.descRare = (it.desc || "") + " · [Cực hiếm] " + ((it.rare && it.rare.desc) || "");
+      if (it.uncommon && it.uncommon.desc) {
+        it.descUncommon = (it.desc || "") + " · ▲ " + it.uncommon.desc;
+      }
+      if (it.rare && it.rare.desc) {
+        const bits = [it.desc || ""];
+        if (it.uncommon && it.uncommon.desc) bits.push("▲ " + it.uncommon.desc);
+        bits.push("◆ " + it.rare.desc);
+        it.descRare = bits.filter(Boolean).join(" · ");
+      }
     }
   }
 

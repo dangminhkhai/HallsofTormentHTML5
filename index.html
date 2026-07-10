@@ -187,7 +187,7 @@
 
             <section class="camp-section hidden" data-camp-panel="well" aria-label="Giếng Sự sống">
               <div class="roster-label">Giếng Sự sống · Trang bị khởi đầu (7 ô)</div>
-              <p class="camp-hint">Mũ / Dây chuyền / Nhẫn×2 / Áo / Giày / Găng · bắt đầu độ Thường · trong sảnh: rương + hồi/bán</p>
+              <p class="camp-hint">Bấm chọn món · <strong>bấm lại</strong> nâng độ hiếm: <span style="color:#a0a8b0">Thường</span> → <span style="color:#50c070">Hiếm vừa ▲</span> → <span style="color:#c080e0">Cực hiếm ◆</span> → gỡ · 7 ô · miễn phí (mở hết)</p>
               <div class="camp-actions">
                 <button type="button" id="btn-clear-loadout" class="camp-btn secondary">Xóa trang bị khởi đầu</button>
                 <span id="loadout-count" class="loadout-count">0 / 7</span>
@@ -394,21 +394,33 @@
     <div id="pause" class="overlay hidden">
       <div class="overlay-panel pause-panel">
         <h2>TẠM DỪNG</h2>
-        <p class="pause-hint"><kbd>Esc</kbd> / <kbd>P</kbd> tiếp tục · Cài đặt bên dưới</p>
-        <div id="build-summary" class="build-summary" aria-label="Build hiện tại"></div>
+        <p class="pause-hint"><kbd>Esc</kbd> / <kbd>P</kbd> / chạm Tiếp tục</p>
 
-        <section class="pause-settings" aria-label="Cài đặt">
-          <div class="roster-label pause-set-title">Cài đặt</div>
-          <div class="settings-row">
-            <label class="settings-label">Âm lượng <span id="pause-vol-label">55%</span>
-              <input type="range" id="pause-set-vol" min="0" max="100" value="55" />
-            </label>
-            <label class="chk-set"><input type="checkbox" id="pause-set-sfx" checked /> Hiệu ứng âm thanh</label>
-            <label class="chk-set"><input type="checkbox" id="pause-set-shake" checked /> Rung màn hình</label>
-            <label class="chk-set"><input type="checkbox" id="pause-set-gamepad" checked /> Tay cầm</label>
-            <label class="chk-set"><input type="checkbox" id="pause-set-joystick" checked /> Cần xoay (mobile)</label>
-          </div>
-        </section>
+        <nav class="pause-subtabs" aria-label="Tạm dừng">
+          <button type="button" class="pause-subtab selected" data-pause-tab="status" id="pause-tab-status">Trạng thái</button>
+          <button type="button" class="pause-subtab" data-pause-tab="settings" id="pause-tab-settings">Cài đặt</button>
+        </nav>
+
+        <div class="pause-tab-body">
+          <section id="pause-panel-status" class="pause-tab-panel" data-pause-panel="status" aria-label="Trạng thái build">
+            <div id="build-summary" class="build-summary" aria-label="Build hiện tại"></div>
+          </section>
+
+          <section id="pause-panel-settings" class="pause-tab-panel pause-tab-settings hidden" data-pause-panel="settings" aria-label="Cài đặt">
+            <div class="pause-settings">
+              <label class="settings-label pause-vol-row">
+                <span class="pause-vol-head">Âm lượng <em id="pause-vol-label">55%</em></span>
+                <input type="range" id="pause-set-vol" min="0" max="100" value="55" />
+              </label>
+              <div class="pause-chk-grid" role="group" aria-label="Tùy chọn">
+                <label class="chk-set"><input type="checkbox" id="pause-set-sfx" checked /> <span>Âm thanh</span></label>
+                <label class="chk-set"><input type="checkbox" id="pause-set-shake" checked /> <span>Rung màn</span></label>
+                <label class="chk-set"><input type="checkbox" id="pause-set-gamepad" checked /> <span>Tay cầm</span></label>
+                <label class="chk-set"><input type="checkbox" id="pause-set-joystick" checked /> <span>Cần xoay</span></label>
+              </div>
+            </div>
+          </section>
+        </div>
 
         <div class="pause-actions">
           <button id="btn-resume" type="button">Tiếp tục</button>
